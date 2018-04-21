@@ -15,3 +15,18 @@ body {
 canvas {
     display: block;
 }
+.box {
+    display: block;
+    position: fixed;
+    width: 60px;
+    height: 60px;
+    background: #fff;
+    left: 60px;
+    top: 60px;
+}
+#box2 {
+    top: 150px;
+}
+#box3 {
+    top: 240px;
+}

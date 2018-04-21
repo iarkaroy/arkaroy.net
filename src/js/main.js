@@ -1,6 +1,7 @@
 require('../scss/main.scss');
 
 import Slices from './slices';
+import animate from './animate';
 
 var document = window.document;
 var canvas = document.getElementById('canvas');
@@ -30,7 +31,25 @@ for (var i = 0; i < slices.length; ++i) {
     slice.w = Math.floor(Math.random() * 50);
 }
 
-requestAnimationFrame(render);
+// requestAnimationFrame(render);
+var divs = document.querySelectorAll('.box');
+for(var i = 0; i < divs.length; ++i) {
+    divs[i].left = 60 * i;
+}
+var anim = animate({
+    targets: Array.prototype.slice.call(document.querySelectorAll('.box')),
+    left: 200,
+    easing: 'quadInOut',
+    duration: [2000, 1000, 2500],
+    update: () => {
+        for(var i = 0; i < divs.length; ++i) {
+            divs[i].style.left = divs[i].left + 'px';
+        }
+    },
+    complete: () => {
+        anim.reverse();
+    }
+});
 
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
