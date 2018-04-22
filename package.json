@@ -35,6 +35,7 @@
   ],
   "devDependencies": {
     "@iarkaroy/utils": "^0.2.0",
+    "animejs": "^2.2.0",
     "autoprefixer": "^8.2.0",
     "babel-core": "^6.26.0",
     "babel-loader": "^7.1.4",
@@ -44,6 +45,7 @@
     "fontfaceobserver": "^2.0.13",
     "node-sass": "^4.7.2",
     "postcss-loader": "^2.1.3",
+    "raw-loader": "^0.5.1",
     "sass-loader": "^6.0.7",
     "style-loader": "^0.20.3",
     "webpack": "^4.2.0",
