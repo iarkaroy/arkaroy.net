@@ -51,7 +51,10 @@ function createAnimation(params) {
         var seek = new Date().getTime() - this.startTime;
         var totalElapsed = null;
         forEach(this.endValues, (end, i) => {
-            var elapsed = seek / this.durations[i];
+            var elapsed = 0;
+            if (seek > this.delays[i]) {
+                elapsed = (seek - this.delays[i]) / this.durations[i];
+            }
             if (elapsed > 1) elapsed = 1;
             this.elapsed[i] = elapsed;
             var value = easing[this.easing](elapsed);
