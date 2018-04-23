@@ -25,7 +25,7 @@ var fakeCtx = document.createElement('canvas').getContext('2d');
 fakeCtx.canvas.width = canvas.width;
 fakeCtx.canvas.height = canvas.height;
 
-var mouse = new Float32Array([-2, -2]);
+var mouse = new Float32Array([0, 0]);
 
 var font = new FontFaceObserver('Montserrat', {
     weight: 700
@@ -35,7 +35,7 @@ font.load().then(() => {
     fakeCtx.textAlign = 'left';
     fakeCtx.fillStyle = '#444';
     fakeCtx.font = '700 600px Montserrat';
-    fakeCtx.fillText('ARKA', 200, -120);
+    fakeCtx.fillText('DEMO', 200, -120);
     setup();
 });
 
@@ -67,6 +67,7 @@ function render() {
     disp.bind(1, program.u_displacement);
     buffer.data(QUAD, program.a_quad, 2);
     gl.uniform2fv(program.u_mouse, mouse);
+    gl.uniform2fv(program.u_resolution, new Float32Array([canvas.width, canvas.height]));
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -78,7 +79,7 @@ function render() {
 document.addEventListener('mousemove', function (evt) {
     const x = evt.pageX / canvas.width * 2 - 1;
     const y = evt.pageY / canvas.height * -2 + 1;
-    mouse = new Float32Array([x, y]);
+    mouse = new Float32Array([evt.pageX, evt.pageY]);
 }, false);
 
 
