@@ -35,7 +35,7 @@ font.load().then(() => {
     fakeCtx.textAlign = 'left';
     fakeCtx.fillStyle = '#444';
     fakeCtx.font = '700 600px Montserrat';
-    fakeCtx.fillText('DEMO', 200, -120);
+    fakeCtx.fillText('TEST', 200, -120);
     setup();
 });
 
@@ -44,10 +44,10 @@ var tex, disp, program, buffer;
 var displacements = [];
 for(var i = 0; i < canvas.width * canvas.height; ++i) {
     displacements.push(
-        0,
-        0,
         Math.floor(Math.random() * 256),
-        0
+        Math.floor(Math.random() * 256),
+        Math.floor(Math.random() * 256),
+        Math.floor(Math.random() * 256)
     );
 }
 
