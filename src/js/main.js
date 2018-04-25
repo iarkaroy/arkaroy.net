@@ -27,28 +27,46 @@ fakeCtx.canvas.height = canvas.height;
 
 var mouse = new Float32Array([0, 0]);
 
+var img = new Image();
+img.onload = function () {
+    var w = img.width;
+    var h = img.height;
+    fakeCtx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2);
+    setup();
+};
+img.src = 'art.jpg';
+
+/*
 var font = new FontFaceObserver('Montserrat', {
     weight: 700
 });
 font.load().then(() => {
-    fakeCtx.textBaseline = 'top';
-    fakeCtx.textAlign = 'left';
-    fakeCtx.fillStyle = '#444';
-    fakeCtx.font = '700 600px Montserrat';
-    fakeCtx.fillText('TEST', 200, -120);
-    setup();
+    //fakeCtx.textBaseline = 'top';
+    //fakeCtx.textAlign = 'left';
+    //fakeCtx.fillStyle = '#444';
+    //fakeCtx.font = '700 600px Montserrat';
+    //fakeCtx.fillText('TEST', 200, -120);
 });
+*/
 
 var tex, disp, program, buffer;
 
-var displacements = [];
-for(var i = 0; i < canvas.width * canvas.height; ++i) {
-    displacements.push(
-        Math.floor(Math.random() * 256),
-        Math.floor(Math.random() * 256),
-        Math.floor(Math.random() * 256),
-        Math.floor(Math.random() * 256)
-    );
+function displacement() {
+    var ctx = document.createElement('canvas').getContext('2d');
+    ctx.canvas.width = window.innerWidth;
+    ctx.canvas.height = window.innerHeight;
+    var colors = [0, 80, 170, 255];
+    var x = 0, y = 0, w = 20, h = 20;
+    var tw = Math.ceil(ctx.canvas.width / w);
+    var th = Math.ceil(ctx.canvas.height / h);
+    for(x = 0; x < tw; ++x) {
+        for(y = 0; y < th; ++y) {
+            var c = colors[Math.floor(Math.random() * colors.length)];
+            ctx.fillStyle = `rgb(${c}, ${c}, ${c})`;
+            ctx.fillRect(x*w, y*h, w, h);
+        }
+    }
+    return ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 
 function setup() {
@@ -56,7 +74,7 @@ function setup() {
     buffer = util.buffer(gl);
     var imagedata = fakeCtx.getImageData(0, 0, fakeCtx.canvas.width, fakeCtx.canvas.height);
     tex = util.texture(gl, canvas.width, canvas.height, new Uint8Array(imagedata.data));
-    disp = util.texture(gl, canvas.width, canvas.height, new Uint8Array(displacements));
+    disp = util.texture(gl, canvas.width, canvas.height, new Uint8Array(displacement().data));
     requestAnimationFrame(render);
 }
 
