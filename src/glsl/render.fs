@@ -8,27 +8,31 @@ uniform vec2 u_resolution;
 uniform vec2 u_mouse;
 
 const float PI = 3.14159265359;
-const float speed = 10.0;
-const float decay = 200.0;
-const float bound = 400.0;
-const float radius = 20.0;
-const float strength = 2.0;
-const float fading = 1.0;
-const float noiseFading = 0.65;
-const float noiseFadingFactor1 = 0.6;
-const float noiseFadingFactor2 = 0.4;
+
+mat2 rot(float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    return mat2(c, -s, s, c);
+}
 
 void main() {
     vec2 div   = 1.0 / u_resolution.xy;
     vec2 uv    = gl_FragCoord.xy * div;
     uv.y = 1.0 - uv.y;
     
+    vec4 disp = texture2D(u_displacement, uv);
+    vec2 dispVec = vec2(disp.r, disp.g);
+
+    float angle = PI / 4.;
+    vec2 duv = uv + rot(angle) * dispVec * 0.3 * 0.0;
+    /*
     vec2 coord = uv / div;
     vec2 delta = vec2(coord.x - u_mouse.x, coord.y - u_mouse.y);
     float distance = length(delta);
-    // float s = sin(distance * 0.01);
-    // float c = cos(distance * 0.01);
-    float noise = 100.0+texture2D(u_displacement, uv).b;
-    uv += noise / (distance * distance);
-    gl_FragColor = texture2D( u_texture, uv );
+    float noise = 1.0;
+    uv += noise / distance;
+    vec2 duv = texture2D(u_displacement, uv).rg * 2. - 1.;
+    uv += duv * 0.05;
+    */
+    gl_FragColor = texture2D( u_texture, duv );
 }
