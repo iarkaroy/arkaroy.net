@@ -1,158 +1,134 @@
 require('../scss/main.scss');
 
-import Slices from './slices';
-import animate from './animate';
-import FontFaceObserver from 'fontfaceobserver';
-import * as util from './webgl-utils';
-
 var document = window.document;
 var canvas = document.getElementById('canvas');
-//var ctx = canvas.getContext('2d');
+var ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
-const angle = -45;
-var slices;
 
-const QUAD = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+var mouse, data, buffer, pixels;
 
-var gl = util.getWebGLContext(canvas);
-gl.getExtension('OES_texture_float');
-gl.getExtension('GL_OES_standard_derivatives');
-gl.getExtension('OES_standard_derivatives');
-gl.getExtension('EXT_shader_texture_lod');
-
-var fakeCtx = document.createElement('canvas').getContext('2d');
-fakeCtx.canvas.width = canvas.width;
-fakeCtx.canvas.height = canvas.height;
-
-var mouse = new Float32Array([0, 0]);
-
-var img = new Image();
-img.onload = function () {
-    var w = img.width;
-    var h = img.height;
-    fakeCtx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2);
-    setup();
-};
-img.src = 'art.jpg';
-
-/*
-var font = new FontFaceObserver('Montserrat', {
-    weight: 700
-});
-font.load().then(() => {
-    //fakeCtx.textBaseline = 'top';
-    //fakeCtx.textAlign = 'left';
-    //fakeCtx.fillStyle = '#444';
-    //fakeCtx.font = '700 600px Montserrat';
-    //fakeCtx.fillText('TEST', 200, -120);
-});
-*/
-
-var tex, disp, program, buffer;
-
-function displacement() {
-    var ctx = document.createElement('canvas').getContext('2d');
-    ctx.canvas.width = window.innerWidth;
-    ctx.canvas.height = window.innerHeight;
-    var colors = [0, 80, 170, 255];
-    var x = 0, y = 0, w = 20, h = 20;
-    var tw = Math.ceil(ctx.canvas.width / w);
-    var th = Math.ceil(ctx.canvas.height / h);
-    for(x = 0; x < tw; ++x) {
-        for(y = 0; y < th; ++y) {
-            var c = colors[Math.floor(Math.random() * colors.length)];
-            ctx.fillStyle = `rgb(${c}, ${c}, ${c})`;
-            ctx.fillRect(x*w, y*h, w, h);
-        }
+class Pixel {
+    constructor(x, y, data) {
+        this.position = new Vector2D(x, y);
+        this.origin = new Vector2D().copyFrom(this.position);
+        this.velocity = new Vector2D();
+        this.data = data;
     }
-    return ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+    render() {
+        /*
+        var vec = new Vector2D().copyFrom(this.position).sub(mouse);
+        var dist = vec.length();
+        var radius = 100;
+        var angle = vec.direction();
+        var amount = clamp(convertRange(dist, 0, radius, 100, 0), -100, 100);
+        var target = new Vector2D().copyFrom(this.origin).addAngleRadius(angle, radius);
+        vec = vec.copyFrom(target).sub(this.position).mult(0.1);
+        this.velocity.add(vec);
+        this.position.add(this.velocity);
+        this.velocity.mult(0.92);
+        */
+        var index = Math.floor(this.position.y * canvas.width + this.position.x);
+        buffer[index] = this.data;
+    }
 }
 
-function setup() {
-    program = util.program(gl, 'quad.vs', 'render.fs');
-    buffer = util.buffer(gl);
-    var imagedata = fakeCtx.getImageData(0, 0, fakeCtx.canvas.width, fakeCtx.canvas.height);
-    tex = util.texture(gl, canvas.width, canvas.height, new Uint8Array(imagedata.data));
-    disp = util.texture(gl, canvas.width, canvas.height, new Uint8Array(displacement().data));
-    requestAnimationFrame(render);
+class Vector2D {
+    constructor(x, y) {
+        this.x = x || 0;
+        this.y = y || 0;
+    }
+    add(other) {
+        this.x += other.x;
+        this.y += other.y;
+        return this;
+    }
+    sub(other) {
+        this.x -= other.x;
+        this.y -= other.y;
+        return this;
+    }
+    mult(s) {
+        this.x *= s;
+        this.y *= s;
+        return this;
+    }
+    copyFrom(other) {
+        this.x = other.x;
+        this.y = other.y;
+        return this;
+    }
+    length() {
+        return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
+    }
+    direction() {
+        return Math.atan2(this.y, this.x);
+    }
+    addAngleRadius(angle, radius) {
+        this.x += Math.cos(angle) * radius;
+        this.y += Math.sin(angle) * radius;
+        return this
+    }
 }
+
+function convertRange(f, i, g, k, h) {
+    var j = (g - i);
+    var e = (h - k);
+    return (((f - i) * e) / j) + k;
+}
+
+function clamp(f, g, e) { return Math.min(Math.max(f, g), e) }
+
+
+mouse = new Vector2D(canvas.width / 2, canvas.height / 2);
+data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+buffer = new Uint32Array(data.data.buffer);
+pixels = [];
+
+getImagePixels('art.jpg').then((pxs, width, height) => {
+    pixels = pxs;
+    requestAnimationFrame(render);
+});
 
 function render() {
     requestAnimationFrame(render);
-    gl.useProgram(program);
-    tex.bind(0, program.u_texture);
-    disp.bind(1, program.u_displacement);
-    buffer.data(QUAD, program.a_quad, 2);
-    gl.uniform2fv(program.u_mouse, mouse);
-    gl.uniform2fv(program.u_resolution, new Float32Array([canvas.width, canvas.height]));
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, QUAD.length / 2);
+    buffer.fill(0);
+    pixels.forEach(pixel => pixel.render());
+    //console.log(buffer);
+    ctx.putImageData(data, 0, 0);
 }
 
-document.addEventListener('mousemove', function (evt) {
-    const x = evt.pageX / canvas.width * 2 - 1;
-    const y = evt.pageY / canvas.height * -2 + 1;
-    mouse = new Float32Array([evt.pageX, evt.pageY]);
-}, false);
-
-
-/*
-var font = new FontFaceObserver('Montserrat', {
-    weight: 700
-});
-font.load().then(() => {
-    slices = new Slices({
-        text: 'ARKA ROY',
-        angle: angle,
-        segments: 20,
-        fontWeight: '700',
-        fontFamily: 'Montserrat',
-        fillColor: '#ffffff'
-    }).get();
-    for (var i = 0; i < slices.length; ++i) {
-        var slice = slices[i];
-        var ys = [
-            -slice.height,
-            canvas.height
-        ];
-        slice.y = ys[Math.floor(Math.random() * ys.length)];
-        slice.x = (slice.y - (canvas.height - slice.height) / 2) / Math.tan(angle * Math.PI / 180);
-        slice.x += (canvas.width - slice.width) / 2;
-        slice.o = 0;
-    }
-    animate({
-        targets: slices,
-        x: (canvas.width - slice.width) / 2,
-        y: (canvas.height - slice.height) / 2,
-        o: 1,
-        easing: 'backOut',
-        duration: 1500,
-        delay: (target, index) => {
-            return Math.floor(Math.random() * 1000);
-        },
-        update: render
-    
+function getImagePixels(src) {
+    return new Promise((resolve, reject) => {
+        var img = new Image();
+        img.onload = () => {
+            var w = img.width;
+            var h = img.height;
+            var ctx = document.createElement('canvas').getContext('2d');
+            ctx.canvas.width = w;
+            ctx.canvas.height = h;
+            ctx.drawImage(img, 0, 0);
+            var imagedata = ctx.getImageData(0, 0, w, h);
+            var buff = new Uint32Array(imagedata.data.buffer);
+            var pixels = [];
+            for (var x = 0; x < w; ++x) {
+                for (var y = 0; y < h; ++y) {
+                    var index = (y * w + x);
+                    var r = imagedata.data[index];
+                    var g = imagedata.data[++index];
+                    var b = imagedata.data[++index];
+                    var a = imagedata.data[++index];
+                    var color = `rgba(${r}, ${g}, ${b}, ${a})`;
+                    var data = (a << 24) | (b << 16) | (g << 8) | r;
+                    pixels.push(new Pixel(x, y, buff[index]));
+                }
+            }
+            resolve(pixels, w, h);
+        };
+        img.src = src;
     });
-});
-
-var fakeCtx = document.createElement('canvas').getContext('2d');
-fakeCtx.canvas.width = canvas.width;
-fakeCtx.canvas.height = canvas.height;
-
-function render() {
-    fakeCtx.clearRect(0, 0, canvas.width, canvas.height);
-    var len = slices.length;
-    for (var i = 0; i < len; ++i) {
-        var slice = slices[i];
-        fakeCtx.globalAlpha = slice.o;
-        fakeCtx.drawImage(slice.canvas, slice.x, slice.y);
-    }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(fakeCtx.canvas, 0, 0);
 }
-*/
+
+document.addEventListener('mousemove', (e) => {
+    mouse = new Vector2D(e.pageX, e.pageY);
+});
