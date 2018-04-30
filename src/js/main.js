@@ -16,7 +16,6 @@ class Pixel {
         this.data = data;
     }
     render() {
-        /*
         var vec = new Vector2D().copyFrom(this.position).sub(mouse);
         var dist = vec.length();
         var radius = 100;
@@ -27,9 +26,10 @@ class Pixel {
         this.velocity.add(vec);
         this.position.add(this.velocity);
         this.velocity.mult(0.92);
-        */
-        var index = Math.floor(this.position.y * canvas.width + this.position.x);
-        buffer[index] = this.data;
+        if (this.position.x >= 0 && this.position.x < canvas.width && this.position.y >= 0 && this.position.y < canvas.height) {
+            var index = Math.floor(this.position.y) * canvas.width + Math.floor(this.position.x);
+            buffer[index] = this.data;
+        }
     }
 }
 
@@ -113,14 +113,8 @@ function getImagePixels(src) {
             var pixels = [];
             for (var x = 0; x < w; ++x) {
                 for (var y = 0; y < h; ++y) {
-                    var index = (y * w + x);
-                    var r = imagedata.data[index];
-                    var g = imagedata.data[++index];
-                    var b = imagedata.data[++index];
-                    var a = imagedata.data[++index];
-                    var color = `rgba(${r}, ${g}, ${b}, ${a})`;
-                    var data = (a << 24) | (b << 16) | (g << 8) | r;
-                    pixels.push(new Pixel(x, y, buff[index]));
+                    var index = y * w + x;
+                    pixels.push(new Pixel(x+100, y+100, buff[index]));
                 }
             }
             resolve(pixels, w, h);
