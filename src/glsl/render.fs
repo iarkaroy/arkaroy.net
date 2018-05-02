@@ -6,6 +6,7 @@ uniform sampler2D u_texture;
 uniform sampler2D u_displacement;
 uniform vec2 u_resolution;
 uniform vec2 u_mouse;
+uniform float u_frame;
 
 const float PI = 3.14159265359;
 
@@ -22,17 +23,9 @@ void main() {
     
     vec4 disp = texture2D(u_displacement, uv);
     vec2 dispVec = vec2(disp.r, disp.g);
+    vec2 distortedUV = uv + dispVec * 0.2;
 
-    float angle = PI / 4.;
-    vec2 duv = uv + rot(angle) * dispVec * 0.3 * 0.0;
-    /*
-    vec2 coord = uv / div;
-    vec2 delta = vec2(coord.x - u_mouse.x, coord.y - u_mouse.y);
-    float distance = length(delta);
-    float noise = 1.0;
-    uv += noise / distance;
-    vec2 duv = texture2D(u_displacement, uv).rg * 2. - 1.;
-    uv += duv * 0.05;
-    */
-    gl_FragColor = texture2D( u_texture, duv );
+    // float angle = PI / 3.;
+    // vec2 duv = uv + rot(angle) * dispVec * 0.3 * 0.1;
+    gl_FragColor = texture2D( u_texture, distortedUV );
 }
