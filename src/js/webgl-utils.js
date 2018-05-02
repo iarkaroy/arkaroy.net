@@ -141,7 +141,10 @@ export function texture(gl, width, height, data, wrap, filter) {
     var texture = gl.createTexture();
     texture.gl = gl;
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+    if( isArrayBufferView(data) )
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+    else
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, data);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
@@ -184,4 +187,8 @@ export function error(msg) {
     } else {
         log(msg);
     }
+}
+
+function isArrayBufferView(value) {
+    return value && value.buffer instanceof ArrayBuffer && value.byteLength !== undefined;
 }
