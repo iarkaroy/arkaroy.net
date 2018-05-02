@@ -21,7 +21,8 @@ void main() {
     vec2 uv    = gl_FragCoord.xy * div;
     uv.y = 1.0 - uv.y;
     
-    vec4 disp = texture2D(u_displacement, uv);
+    vec2 dispUV = uv + u_frame * 0.0004;
+    vec4 disp = texture2D(u_displacement, fract(dispUV));
     vec2 dispVec = vec2(disp.r, disp.g) * 0.2;
     vec2 coord = uv / div;
     vec2 delta = vec2( coord.x - u_mouse.x, coord.y - u_mouse.y );
