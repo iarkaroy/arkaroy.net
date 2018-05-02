@@ -22,8 +22,12 @@ void main() {
     uv.y = 1.0 - uv.y;
     
     vec4 disp = texture2D(u_displacement, uv);
-    vec2 dispVec = vec2(disp.r, disp.g);
-    vec2 distortedUV = uv + dispVec * 0.2;
+    vec2 dispVec = vec2(disp.r, disp.g) * 0.2;
+    vec2 coord = uv / div;
+    vec2 delta = vec2( coord.x - u_mouse.x, coord.y - u_mouse.y );
+    float distance = length(delta);
+    dispVec -= 0.0015 * distance;
+    vec2 distortedUV = uv + clamp( dispVec, 0.0, 0.2 );
 
     // float angle = PI / 3.;
     // vec2 duv = uv + rot(angle) * dispVec * 0.3 * 0.1;
