@@ -36,5 +36,8 @@ module.exports = {
                 use: 'raw-loader'
             }
         ]
+    },
+    devServer: {
+        historyApiFallback: true
     }
 }
