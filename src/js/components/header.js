@@ -5,10 +5,13 @@ class Header extends Component {
 
     render() {
         return (
-            <header>
-                <h1>Header!</h1>
-                <Link to="/">Home</Link>
-                <Link to="/projects">Projects</Link>
+            <header className="header">
+                <h1>ARKA ROY</h1>
+                <div className="bar"><div></div></div>
+                <ul className="menu">
+                    <li><Link to="/">Home</Link></li>
+                    <li><Link to="/projects">Projects</Link></li>
+                </ul>
             </header>
         );
     }
