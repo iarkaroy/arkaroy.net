@@ -1,3 +1,7 @@
+require('../scss/main.scss');
+
 import React from 'react';
 import { render } from 'react-dom';
-render(<h1>Hello</h1>, document.getElementById('app'));
+import App from './components/app';
+
+render(<App />, document.getElementById('app'));
