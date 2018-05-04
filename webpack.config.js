@@ -9,19 +9,16 @@ module.exports = {
         path: __dirname,
         filename: './dist/[name].js'
     },
-    devtool: 'source-map',
+    devtool: false,
     plugins: [
         new ExtractTextPlugin('./dist/main.css')
     ],
     module: {
         rules: [
             {
-                test: /\.js$/,
+                test: /\.jsx?$/,
                 exclude: /(node_modules|bower_components)/,
                 loader: 'babel-loader',
-                query: {
-                    presets: ['env']
-                }
             },
             {
                 test: /\.scss$/,
