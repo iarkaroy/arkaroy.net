@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import { Link } from 'react-router-dom';
+import { withRouter } from 'react-router-dom';
+import MenuLink from './menulink';
 
 class Header extends Component {
 
@@ -25,8 +26,8 @@ class Header extends Component {
                 <div className={showMenu ? 'bar closed' : 'bar'} ref="bar" onClick={this.handleBarClick}><div></div></div>
                 <div className={showMenu ? 'menu open' : 'menu'}>
                     <ul>
-                        <li><Link to="/">Home</Link></li>
-                        <li><Link to="/projects">Projects</Link></li>
+                        <li><MenuLink to="/">Home</MenuLink></li>
+                        <li><MenuLink to="/projects">Projects</MenuLink></li>
                     </ul>
                 </div>
             </header>
