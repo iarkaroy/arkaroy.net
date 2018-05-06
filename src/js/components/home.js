@@ -1,10 +1,17 @@
 import React, { Component } from 'react';
+import { TransitionGroup } from 'react-transition-group';
+
+import Intro from './intro';
 
 class Home extends Component {
 
+    constructor(props) {
+        super(props);
+    }
+
     render() {
         return (
-            <h1>Hello!</h1>
+            <Intro />
         );
     }
 
