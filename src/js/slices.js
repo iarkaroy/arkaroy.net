@@ -43,13 +43,13 @@ export default class Slices {
         ctx.font = font;
         w = ctx.measureText(o.text).width;
         h = Math.ceil(o.fontSize * 1.2);
-        ctx.canvas.width = w;
+        ctx.canvas.width = w + 20;
         ctx.canvas.height = h;
         ctx.font = font;
         ctx.textBaseline = 'middle';
         ctx.textAlign = 'center';
         ctx.fillStyle = o.fillColor;
-        ctx.fillText(o.text, w / 2, h / 2);
+        ctx.fillText(o.text, w / 2 + 10, h / 2);
         this.make(ctx.canvas);
     }
 
