@@ -3,6 +3,7 @@ import React, { Component } from 'react';
 import Slices from '../slices';
 import animate from '../animate';
 import FontFaceObserver from 'fontfaceobserver';
+import events from '../event-system';
 
 class Intro extends Component {
 
@@ -15,19 +16,30 @@ class Intro extends Component {
         this.updateViewportDimension = this.updateViewportDimension.bind(this);
         this.setup = this.setup.bind(this);
         this.renderCanvas = this.renderCanvas.bind(this);
+        this.animateIn = this.animateIn.bind(this);
+        this.animateOut = this.animateOut.bind(this);
+        this.willLeave = this.willLeave.bind(this);
     }
 
     componentDidMount() {
         this.canvas = this.refs.canvas;
         this.ctx = this.canvas.getContext('2d');
         this.slices = [];
+        this.options = {};
         this.animation = null;
         this.updateViewportDimension();
         window.addEventListener('resize', this.updateViewportDimension);
+        events.subscribe('route.will.leave', this.willLeave);
     }
 
     componentWillUnmount() {
         window.removeEventListener('resize', this.updateViewportDimension);
+        events.unsubscribe('route.will.leave', this.willLeave);
+    }
+
+    willLeave(data) {
+        console.log(data);
+        this.animateOut(data);
     }
 
     updateViewportDimension() {
@@ -43,7 +55,7 @@ class Intro extends Component {
 
     setup() {
         this.slices = new Slices({
-            text: 'ARKA ROY',
+            text: 'DEMO',
             angle: -45,
             segments: 20,
             fontWeight: '900',
@@ -58,6 +70,7 @@ class Intro extends Component {
             centerY - sliceHeight,
             centerY + sliceHeight
         ];
+        this.options = { sliceWidth, sliceHeight, centerX, centerY, possibleYs };
         for (var i = 0; i < this.slices.length; ++i) {
             var slice = this.slices[i];
             slice.y = possibleYs[Math.floor(Math.random() * possibleYs.length)];
@@ -65,10 +78,14 @@ class Intro extends Component {
             slice.x += (this.state.viewportWidth - slice.width) / 2;
             slice.o = 0;
         }
+        this.animateIn();
+    }
+
+    animateIn() {
         this.animation = animate({
             targets: this.slices,
-            x: centerX,
-            y: centerY,
+            x: this.options.centerX,
+            y: this.options.centerY,
             o: 1,
             easing: 'quintIn',
             duration: 1000,
@@ -77,6 +94,14 @@ class Intro extends Component {
             },
             update: this.renderCanvas,
         });
+    }
+
+    animateOut(to) {
+        this.animation.set({
+            complete: () => {
+                events.publish('route.can.leave', to);
+            }
+        }).reverse();
     }
 
     renderCanvas() {
