@@ -84,7 +84,16 @@ function createAnimation(params) {
         this.endValues = temp;
         this.completed = false;
         this.startTime = new Date().getTime();
+        this.elapsed.fill(0);
         requestAnimationFrame(tick);
+    };
+    animation.set = function (obj) {
+        for (var k in obj) {
+            if (obj.hasOwnProperty(k)) {
+                this[k] = obj[k];
+            }
+        }
+        return this;
     };
     animation.seek = function (t) {
 
@@ -193,8 +202,8 @@ function tick() {
         anim.forward();
     });
 
-    animations = animations.filter(anim => !anim.completed);
-    if (animations.length > 0) requestAnimationFrame(tick);
+    var runningAnimations = animations.filter(anim => !anim.completed);
+    if (runningAnimations.length > 0) requestAnimationFrame(tick);
 }
 
 function clone(obj) {
