@@ -25,7 +25,7 @@ class Header extends Component {
             <header className="header">
                 <div className={showMenu ? 'bar closed' : 'bar'} ref="bar" onClick={this.handleBarClick}><div></div></div>
                 <div className={showMenu ? 'menu open' : 'menu'}>
-                    <ul>
+                    <ul onClick={this.handleBarClick}>
                         <li><MenuLink to="/">Home</MenuLink></li>
                         <li><MenuLink to="/projects">Projects</MenuLink></li>
                     </ul>
