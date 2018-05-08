@@ -105,7 +105,12 @@ class Intro extends Component {
 
     render() {
         return (
-            <canvas ref="canvas" width={this.state.viewportWidth} height={this.state.viewportHeight} />
+            <canvas
+                ref="canvas"
+                width={this.state.viewportWidth}
+                height={this.state.viewportHeight}
+                style={{ zIndex: 2 }}
+            />
         );
     }
 

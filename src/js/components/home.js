@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import Background from './background';
 import Intro from './intro';
 
 class Home extends Component {
@@ -15,7 +16,10 @@ class Home extends Component {
 
     render() {
         return (
-            <Intro ref={instance => { this.intro = instance; }} />
+            <div>
+                <Background />
+                <Intro ref={instance => { this.intro = instance; }} />
+            </div>
         );
     }
 
