@@ -3,7 +3,6 @@ import React, { Component } from 'react';
 import Slices from '../slices';
 import animate from '../animate';
 import FontFaceObserver from 'fontfaceobserver';
-import events from '../event-system';
 
 class Intro extends Component {
 
@@ -18,7 +17,6 @@ class Intro extends Component {
         this.renderCanvas = this.renderCanvas.bind(this);
         this.animateIn = this.animateIn.bind(this);
         this.animateOut = this.animateOut.bind(this);
-        this.willLeave = this.willLeave.bind(this);
     }
 
     componentDidMount() {
@@ -29,17 +27,10 @@ class Intro extends Component {
         this.animation = null;
         this.updateViewportDimension();
         window.addEventListener('resize', this.updateViewportDimension);
-        events.subscribe('route.will.leave', this.willLeave);
     }
 
     componentWillUnmount() {
         window.removeEventListener('resize', this.updateViewportDimension);
-        events.unsubscribe('route.will.leave', this.willLeave);
-    }
-
-    willLeave(data) {
-        console.log(data);
-        this.animateOut(data);
     }
 
     updateViewportDimension() {
@@ -96,11 +87,9 @@ class Intro extends Component {
         });
     }
 
-    animateOut(to) {
+    animateOut(callback) {
         this.animation.set({
-            complete: () => {
-                events.publish('route.can.leave', to);
-            }
+            complete: callback
         }).reverse();
     }
 

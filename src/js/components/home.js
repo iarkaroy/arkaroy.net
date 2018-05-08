@@ -1,17 +1,21 @@
 import React, { Component } from 'react';
-import { TransitionGroup } from 'react-transition-group';
-
 import Intro from './intro';
 
 class Home extends Component {
 
     constructor(props) {
         super(props);
+        this.intro = null;
+    }
+
+    componentWillLeave(callback) {
+        if (!this.intro) return callback();
+        this.intro.animateOut(callback);
     }
 
     render() {
         return (
-            <Intro />
+            <Intro ref={instance => { this.intro = instance; }} />
         );
     }
 
