@@ -85,6 +85,7 @@ function createAnimation(params) {
         this.completed = false;
         this.startTime = new Date().getTime();
         this.elapsed.fill(0);
+        animations.push(this);
         requestAnimationFrame(tick);
     };
     animation.set = function (obj) {
@@ -188,8 +189,8 @@ function animate(options = {}) {
     };
 
     var animation = createAnimation(params);
-    animations.push(animation)
-
+    animations.push(animation);
+    
     if (animations.length > 0) {
         requestAnimationFrame(tick);
     }
@@ -202,8 +203,8 @@ function tick() {
         anim.forward();
     });
 
-    var runningAnimations = animations.filter(anim => !anim.completed);
-    if (runningAnimations.length > 0) requestAnimationFrame(tick);
+    animations = animations.filter(anim => !anim.completed);
+    if (animations.length > 0) requestAnimationFrame(tick);
 }
 
 function clone(obj) {
