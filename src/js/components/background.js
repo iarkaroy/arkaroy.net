@@ -22,6 +22,7 @@ uniform sampler2D u_displacement;
 uniform vec2 u_resolution;
 uniform vec2 u_mouse;
 uniform float u_frame;
+uniform float u_distance;
 
 const float PI = 3.14159265359;
 
@@ -42,11 +43,15 @@ void main() {
     vec2 coord = uv / div;
     vec2 delta = vec2( coord.x - u_mouse.x, coord.y - u_mouse.y );
     float distance = length(delta);
-    dispVec -= 0.0015 * distance;
-    vec2 distortedUV = uv + clamp( dispVec, 0.0, 0.2 );
+    float offsetFact = 1.0;
+    float p = u_distance / 100.0;
+    offsetFact -= p * 0.999;
+    dispVec -= offsetFact * distance;
     vec2 xx = clamp( dispVec, 0.0, 0.2 );
-    float avg = (xx.x + xx.y) / 2.;
-    gl_FragColor = vec4(avg * 5.);
+    vec4 color = vec4(0);
+    if(xx.x > 0.04 && xx.y > 0.04)
+        color = vec4(.5);
+    gl_FragColor = color;
 }
 `;
 
@@ -78,6 +83,7 @@ class Background extends Component {
         this.dispTexture = null;
         this.frameId = null;
         this.frame = 0;
+        this.distance = 90;
     }
 
     componentDidMount() {
@@ -115,6 +121,7 @@ class Background extends Component {
         this.gl.uniform2fv(this.program.u_mouse, this.mouse);
         this.gl.uniform2fv(this.program.u_resolution, new Float32Array([this.canvas.width, this.canvas.height]));
         this.gl.uniform1f(this.program.u_frame, this.frame++);
+        this.gl.uniform1f(this.program.u_distance, this.distance);
         this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
         this.gl.clearColor(0, 0, 0, 0);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
