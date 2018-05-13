@@ -79,9 +79,9 @@ class Intro extends Component {
             y: this.options.centerY,
             o: 1,
             easing: 'quintIn',
-            duration: 1000,
+            duration: 600,
             delay: (target, index) => {
-                return Math.floor(Math.random() * 1000);
+                return Math.floor(Math.random() * 800);
             },
             update: this.renderCanvas,
         });
