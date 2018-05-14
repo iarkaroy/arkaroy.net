@@ -24,7 +24,7 @@ WebGLFramebuffer.prototype.unbind = function () {
 
 export function getWebGLContext(canvas) {
     var param = {
-        alpha:true,
+        alpha: true,
         antialias: true
     };
     var gl = canvas.getContext("webgl", param) || canvas.getContext("experimental-webgl", param);
@@ -99,8 +99,9 @@ export function attachAttribs(gl, program) {
 export function attachUniforms(gl, program) {
     var uniformCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
     for (var i = 0; i < uniformCount; ++i) {
-        var info = gl.getActiveUniform(program, i);
-        program[info.name] = gl.getUniformLocation(program, info.name);
+        const info = gl.getActiveUniform(program, i);
+        const name = info.name.replace(/(\[\d+\])/ig, '');
+        program[name] = gl.getUniformLocation(program, name);
     }
 }
 
@@ -141,7 +142,7 @@ export function texture(gl, width, height, data, wrap, filter) {
     var texture = gl.createTexture();
     texture.gl = gl;
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    if( isArrayBufferView(data) )
+    if (isArrayBufferView(data) || data === null)
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
     else
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, data);
@@ -173,6 +174,18 @@ export function buffer(gl) {
     var buffer = gl.createBuffer();
     buffer.gl = gl;
     return buffer;
+}
+
+export function reset(gl, width, height, blend = false, blendSource = gl.SRC_ALPHA, blendDest = gl.ONE_MINUS_SRC_ALPHA) {
+    gl.viewport(0, 0, width, height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    if(blend) {
+        gl.enable(gl.BLEND);
+        gl.blendFunc(blendSource, blendDest);
+    } else {
+        gl.disable(gl.BLEND);
+    }
 }
 
 export function log(msg) {
