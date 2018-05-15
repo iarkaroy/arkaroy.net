@@ -21,37 +21,34 @@ precision highp float;
 uniform sampler2D u_image;
 uniform vec2 u_resolution;
 uniform vec2 u_mouse;
-uniform vec2 u_blur;
+uniform vec2 u_direction;
 
 const float PI = 3.14159265359;
+
+vec4 blur9(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
+    vec4 color = vec4(0.0);
+    vec2 off1 = vec2(1.3846153846) * direction;
+    vec2 off2 = vec2(3.2307692308) * direction;
+    color += texture2D(image, uv) * 0.2270270270;
+    color += texture2D(image, uv + (off1 / resolution)) * 0.3162162162;
+    color += texture2D(image, uv - (off1 / resolution)) * 0.3162162162;
+    color += texture2D(image, uv + (off2 / resolution)) * 0.0702702703;
+    color += texture2D(image, uv - (off2 / resolution)) * 0.0702702703;
+    return color;
+}
 
 void main() {
     vec2 div   = 1.0 / u_resolution.xy;
     vec2 uv    = gl_FragCoord.xy * div;
-    // uv.y = 1.0 - uv.y;
-    vec2 px = u_blur / 7.0;
-    px /= u_resolution;
+    uv.y = 1.0 - uv.y;
     vec2 coord = uv / div;
-    vec2 delta = vec2(coord.x - u_mouse.x, coord.y - u_mouse.y);
+    vec2 delta = vec2(u_mouse.x - coord.x, u_mouse.y - coord.y);
     float distance = length(delta);
-    gl_FragColor = vec4(0.0);
-    if(distance > 40.) {
-        gl_FragColor += texture2D(u_image, uv + vec2(-7.0*px.x, -7.0*px.y))*0.0044299121055113265;
-        gl_FragColor += texture2D(u_image, uv + vec2(-6.0*px.x, -6.0*px.y))*0.00895781211794;
-        gl_FragColor += texture2D(u_image, uv + vec2(-5.0*px.x, -5.0*px.y))*0.0215963866053;
-        gl_FragColor += texture2D(u_image, uv + vec2(-4.0*px.x, -4.0*px.y))*0.0443683338718;
-        gl_FragColor += texture2D(u_image, uv + vec2(-3.0*px.x, -3.0*px.y))*0.0776744219933;
-        gl_FragColor += texture2D(u_image, uv + vec2(-2.0*px.x, -2.0*px.y))*0.115876621105;
-        gl_FragColor += texture2D(u_image, uv + vec2(-1.0*px.x, -1.0*px.y))*0.147308056121;
-        gl_FragColor += texture2D(u_image, uv                             )*0.159576912161;
-        gl_FragColor += texture2D(u_image, uv + vec2( 1.0*px.x,  1.0*px.y))*0.147308056121;
-        gl_FragColor += texture2D(u_image, uv + vec2( 2.0*px.x,  2.0*px.y))*0.115876621105;
-        gl_FragColor += texture2D(u_image, uv + vec2( 3.0*px.x,  3.0*px.y))*0.0776744219933;
-        gl_FragColor += texture2D(u_image, uv + vec2( 4.0*px.x,  4.0*px.y))*0.0443683338718;
-        gl_FragColor += texture2D(u_image, uv + vec2( 5.0*px.x,  5.0*px.y))*0.0215963866053;
-        gl_FragColor += texture2D(u_image, uv + vec2( 6.0*px.x,  6.0*px.y))*0.00895781211794;
-        gl_FragColor += texture2D(u_image, uv + vec2( 7.0*px.x,  7.0*px.y))*0.0044299121055113265;
+    vec4 color = texture2D(u_image, uv);
+    if(distance < 60.) {
+        color = vec4(0);
     }
+    gl_FragColor = color;
 }
 `;
 
@@ -98,16 +95,11 @@ class Background extends Component {
         };
         this.updateViewportDimension = this.updateViewportDimension.bind(this);
         this.createImage = this.createImage.bind(this);
-        this.blur = this.blur.bind(this);
         this.loop = this.loop.bind(this);
         this.mouse = new Float32Array([0, 0]);
-        this.blurProgram = null;
-        this.renderProgram = null;
+        this.program = null;
         this.buffer = null;
-        this.fbo = null;
-        this.texImage = null;
-        this.texRender = null;
-        this.texMatrix = null;
+        this.texture = null;
         this.frameId = null;
     }
 
@@ -122,10 +114,8 @@ class Background extends Component {
         window.addEventListener('resize', this.updateViewportDimension);
         document.addEventListener('mousemove', this.updateMousePosition);
         this.createImage();
-        this.blurProgram = glUtils.program(this.gl, quadVS, blurFS);
-        this.renderProgram = glUtils.program(this.gl, quadVS, renderFS);
+        this.program = glUtils.program(this.gl, quadVS, blurFS);
         this.buffer = glUtils.buffer(this.gl);
-        this.fbo = glUtils.framebuffer(this.gl);
         this.colorMatrix = new Float32Array([
             1, 0, 0, 0, 0,
             0, 1, 0, 0, 0,
@@ -142,12 +132,11 @@ class Background extends Component {
         ctx.canvas.width = window.innerWidth;
         ctx.canvas.height = window.innerHeight;
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 360px sans-serif';
+        ctx.font = '550px sans-serif';
         ctx.textBaseline = 'middle';
         ctx.textAlign = 'center';
         ctx.fillText('TEST', window.innerWidth / 2, window.innerHeight / 2);
-        this.texImage = glUtils.texture(this.gl, ctx.canvas.width, ctx.canvas.height, ctx.canvas);
-        this.texMatrix = glUtils.texture(this.gl, ctx.canvas.width, ctx.canvas.height, null);
+        this.texture = glUtils.texture(this.gl, ctx.canvas.width, ctx.canvas.height, ctx.canvas, this.gl.CLAMP_TO_EDGE, this.gl.LINEAR);
     }
 
     componentWillUnmount() {
@@ -156,57 +145,18 @@ class Background extends Component {
         cancelAnimationFrame(this.frameId);
     }
 
-    blur(src, size = 2) {
-        var t0 = glUtils.texture(this.gl, this.state.viewportWidth, this.state.viewportHeight, null);
-        var t1 = glUtils.texture(this.gl, this.state.viewportWidth, this.state.viewportHeight, null);
-
-        this.gl.useProgram(this.blurProgram);
-        src.bind(0, this.blurProgram.u_image);
-        this.buffer.data(QUAD, this.blurProgram.a_position, 2);
-        this.gl.uniform2fv(this.blurProgram.u_resolution, new Float32Array([this.canvas.width, this.canvas.height]));
-        this.gl.uniform2fv(this.blurProgram.u_blur, new Float32Array([0, 0]));
-        this.fbo.bind(t0);
-        glUtils.reset(this.gl, this.state.viewportWidth, this.state.viewportHeight, true);
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, QUAD.length / 2);
-
-        const count = Math.ceil(size / 5);
-        for(var i = 0; i < count; ++i) {
-            this.gl.useProgram(this.blurProgram);
-            t0.bind(0, this.blurProgram.u_image);
-            this.buffer.data(QUAD, this.blurProgram.a_position, 2);
-            this.gl.uniform2fv(this.blurProgram.u_resolution, new Float32Array([this.canvas.width, this.canvas.height]));
-            this.gl.uniform2fv(this.blurProgram.u_blur, new Float32Array([0, 5]));
-            this.fbo.bind(t1);
-            glUtils.reset(this.gl, this.state.viewportWidth, this.state.viewportHeight, true);
-            this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, QUAD.length / 2);
-
-            this.gl.useProgram(this.blurProgram);
-            t1.bind(0, this.blurProgram.u_image);
-            this.buffer.data(QUAD, this.blurProgram.a_position, 2);
-            this.gl.uniform2fv(this.blurProgram.u_resolution, new Float32Array([this.canvas.width, this.canvas.height]));
-            this.gl.uniform2fv(this.blurProgram.u_blur, new Float32Array([5, 0]));
-            this.fbo.bind(t0);
-            glUtils.reset(this.gl, this.state.viewportWidth, this.state.viewportHeight, true);
-            this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, QUAD.length / 2);
-            
-        }
-
-        return t0;
-    }
-
     loop() {
         this.frameId = requestAnimationFrame(this.loop);
-
-        this.texMatrix = this.blur(this.texImage, 10);
-
-        this.gl.useProgram(this.renderProgram);
-        this.texMatrix.bind(0, this.renderProgram.u_image);
-        this.buffer.data(QUAD, this.renderProgram.a_position, 2);
-        this.gl.uniform2fv(this.renderProgram.u_resolution, new Float32Array([this.canvas.width, this.canvas.height]));
-        this.gl.uniform1fv(this.renderProgram.m, this.colorMatrix);
-        this.fbo.unbind();
+        
+        this.gl.useProgram(this.program);
+        this.texture.bind(0, this.program.u_image);
+        this.buffer.data(QUAD, this.program.a_position, 2);
+        this.gl.uniform2fv(this.program.u_resolution, new Float32Array([this.canvas.width, this.canvas.height]));
+        this.gl.uniform2fv(this.program.u_mouse, this.mouse);
+        // this.gl.uniform1fv(this.program.m, this.colorMatrix);
         glUtils.reset(this.gl, this.state.viewportWidth, this.state.viewportHeight, true);
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, QUAD.length / 2);
+        
     }
 
     updateViewportDimension() {
@@ -226,7 +176,7 @@ class Background extends Component {
                 ref="canvas"
                 width={this.state.viewportWidth}
                 height={this.state.viewportHeight}
-                style={{ zIndex: 1 }}
+                style={{ zIndex: 1, filter: 'blur(5px) contrast(25)' }}
             />
         );
     }
