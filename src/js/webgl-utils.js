@@ -12,10 +12,10 @@ WebGLTexture.prototype.bind = function (unit, location) {
     this.gl.uniform1i(location, unit);
 };
 
-WebGLFramebuffer.prototype.bind = function (texture) {
+WebGLFramebuffer.prototype.bind = function () {
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this);
-    if (texture)
-        this.gl.framebufferTexture2D(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.gl.TEXTURE_2D, texture, 0);
+    if (this.texture0)
+        this.gl.framebufferTexture2D(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.gl.TEXTURE_2D, this.texture0, 0);
 };
 
 WebGLFramebuffer.prototype.unbind = function () {
@@ -159,9 +159,10 @@ export function texture(gl, width, height, data, wrap, filter) {
  * @param {WebGLRenderingContext} gl 
  * @returns {WebGLFramebuffer}
  */
-export function framebuffer(gl) {
+export function framebuffer(gl, width, height, wrap = gl.CLAMP_TO_EDGE, filter = gl.NEAREST) {
     var framebuffer = gl.createFramebuffer();
     framebuffer.gl = gl;
+    framebuffer.texture0 = texture(gl, width, height, null, wrap, filter);
     return framebuffer;
 }
 
