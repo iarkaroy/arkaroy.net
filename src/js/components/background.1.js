@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import { mat4 } from 'gl-matrix';
 import * as glUtils from '../webgl-utils';
 
 const quadVS = `
@@ -73,6 +72,17 @@ void main() {
 }
 `;
 
+
+const loadImage = (src) => {
+    return new Promise((resolve, reject) => {
+        var img = new Image();
+        img.onload = () => {
+            resolve(img);
+        };
+        img.src = src;
+    });
+};
+
 const QUAD = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
 
 class Background extends Component {
@@ -84,13 +94,13 @@ class Background extends Component {
             viewportHeight: 0
         };
         this.updateViewportDimension = this.updateViewportDimension.bind(this);
+        this.createImage = this.createImage.bind(this);
         this.loop = this.loop.bind(this);
         this.mouse = new Float32Array([0, 0]);
         this.program = null;
         this.buffer = null;
+        this.texture = null;
         this.frameId = null;
-        this.matModelView = null;
-        this.matProjection = null;
     }
 
     componentDidMount() {
@@ -103,17 +113,30 @@ class Background extends Component {
         this.updateViewportDimension();
         window.addEventListener('resize', this.updateViewportDimension);
         document.addEventListener('mousemove', this.updateMousePosition);
-
+        this.createImage();
         this.program = glUtils.program(this.gl, quadVS, blurFS);
         this.buffer = glUtils.buffer(this.gl);
-        this.matModelView = mat4.create();
-        this.matProjection = mat4.create();
-        mat4.perspective(this.matProjection, 45, window.innerWidth / window.innerHeight, 0.1, 100.0);
-        mat4.identity(this.matModelView);
-
+        this.colorMatrix = new Float32Array([
+            1, 0, 0, 0, 0,
+            0, 1, 0, 0, 0,
+            0, 0, 1, 0, 0,
+            0, 0, 0, 1, 0,
+        ]);
         if (!this.frameId) {
             this.frameId = requestAnimationFrame(this.loop);
         }
+    }
+
+    createImage() {
+        var ctx = document.createElement('canvas').getContext('2d');
+        ctx.canvas.width = window.innerWidth;
+        ctx.canvas.height = window.innerHeight;
+        ctx.fillStyle = '#fff';
+        ctx.font = '550px sans-serif';
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        ctx.fillText('TEST', window.innerWidth / 2, window.innerHeight / 2);
+        this.texture = glUtils.texture(this.gl, ctx.canvas.width, ctx.canvas.height, ctx.canvas, this.gl.CLAMP_TO_EDGE, this.gl.LINEAR);
     }
 
     componentWillUnmount() {
@@ -124,15 +147,16 @@ class Background extends Component {
 
     loop() {
         this.frameId = requestAnimationFrame(this.loop);
-        /*
+        
         this.gl.useProgram(this.program);
         this.texture.bind(0, this.program.u_image);
         this.buffer.data(QUAD, this.program.a_position, 2);
         this.gl.uniform2fv(this.program.u_resolution, new Float32Array([this.canvas.width, this.canvas.height]));
         this.gl.uniform2fv(this.program.u_mouse, this.mouse);
+        // this.gl.uniform1fv(this.program.m, this.colorMatrix);
         glUtils.reset(this.gl, this.state.viewportWidth, this.state.viewportHeight, true);
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, QUAD.length / 2);
-        */
+        
     }
 
     updateViewportDimension() {
