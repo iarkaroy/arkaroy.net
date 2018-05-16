@@ -14,7 +14,7 @@ uniform mat4 u_projection;
 void main() {
     vec4 pos = vec4(a_position, 1);
     gl_Position = u_projection * u_modelview * pos;
-    gl_PointSize = 2.;
+    gl_PointSize = 1.0;
 }
 `;
 
@@ -26,7 +26,7 @@ precision highp float;
 const float PI = 3.14159265359;
 
 void main() {
-    gl_FragColor = vec4(1);
+    gl_FragColor = vec4(vec3(0.4), 1);
 }
 `;
 
@@ -46,7 +46,7 @@ const generateSphereCoords = (num = 100) => {
         const phi = Math.random() * 2 * Math.PI;
         var coord = coordAtSphere(theta, phi);
         vertices = vertices.concat(coord.map(c => c * 1));
-        var t = Math.random() * 0.2 + 1.1;
+        var t = Math.random() * 0.2 + 1.2;
         vertices = vertices.concat(coord.map(c => c * t));
     }
     return new Float32Array(vertices);
@@ -62,13 +62,14 @@ class Background extends Component {
         };
         this.updateViewportDimension = this.updateViewportDimension.bind(this);
         this.loop = this.loop.bind(this);
+        this.setupViewport = this.setupViewport.bind(this);
         this.mouse = new Float32Array([0, 0]);
         this.program = null;
         this.buffer = null;
         this.frameId = null;
         this.matModelView = null;
         this.matProjection = null;
-        this.vertices = generateSphereCoords(2000);
+        this.vertices = generateSphereCoords(200);
         this.dist = 3000;
     }
 
@@ -85,14 +86,7 @@ class Background extends Component {
 
         this.program = glUtils.program(this.gl, vs, fs);
         this.buffer = glUtils.buffer(this.gl);
-        this.matModelView = mat4.create();
-        this.matProjection = mat4.create();
-        mat4.perspective(this.matProjection, 45, window.innerWidth / window.innerHeight, 0.1, 100.0);
-        mat4.identity(this.matModelView);
-
-        if (!this.frameId) {
-            this.frameId = requestAnimationFrame(this.loop);
-        }
+        
     }
 
     componentWillUnmount() {
@@ -106,13 +100,14 @@ class Background extends Component {
         
         this.gl.useProgram(this.program);
         this.buffer.data(this.vertices, this.program.a_position, 3);
-        // this.gl.uniform2fv(this.program.u_resolution, new Float32Array([this.canvas.width, this.canvas.height]));
-        // this.gl.uniform2fv(this.program.u_mouse, this.mouse);
-        mat4.lookAt(this.matModelView, [0, 0, this.dist / 1000], [0, 0, 0], [0, 1, 0]);
+        var camX = 3 * Math.cos((new Date()).getTime() * 0.001);
+        var camZ = 3 * Math.sin((new Date()).getTime() * 0.001);
+        mat4.lookAt(this.matModelView, [camX, 0, camZ], [0, 0, 0], [0, 1, 0]);
         this.gl.uniformMatrix4fv(this.program.u_modelview, false, this.matModelView);
         this.gl.uniformMatrix4fv(this.program.u_projection, false, this.matProjection);
         glUtils.reset(this.gl, this.state.viewportWidth, this.state.viewportHeight, true);
         this.gl.drawArrays(this.gl.LINES, 0, this.vertices.length / 6);
+        this.gl.drawArrays(this.gl.POINTS, 0, this.vertices.length / 3);
         
     }
 
@@ -120,7 +115,18 @@ class Background extends Component {
         this.setState({
             viewportWidth: window.innerWidth,
             viewportHeight: window.innerHeight
-        });
+        }, () => this.setupViewport());
+    }
+
+    setupViewport() {
+        this.matModelView = mat4.create();
+        this.matProjection = mat4.create();
+        mat4.perspective(this.matProjection, 45, window.innerWidth / window.innerHeight, 0.1, 100.0);
+        mat4.identity(this.matModelView);
+
+        if (!this.frameId) {
+            this.frameId = requestAnimationFrame(this.loop);
+        }
     }
 
     updateMousePosition = (event) => {
