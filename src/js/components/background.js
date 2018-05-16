@@ -2,78 +2,55 @@ import React, { Component } from 'react';
 import { mat4 } from 'gl-matrix';
 import * as glUtils from '../webgl-utils';
 
-const quadVS = `
+const vs = `
 #ifdef GL_ES
 precision highp float;
 #endif
 
-attribute vec2 a_position;
+attribute vec3 a_position;
+uniform mat4 u_modelview;
+uniform mat4 u_projection;
 
 void main() {
-    gl_Position = vec4(a_position, 0, 1);
+    vec4 pos = vec4(a_position, 1);
+    gl_Position = u_projection * u_modelview * pos;
+    gl_PointSize = 2.;
 }
 `;
 
-const blurFS = `
+const fs = `
 #ifdef GL_ES
 precision highp float;
 #endif
-
-uniform sampler2D u_image;
-uniform vec2 u_resolution;
-uniform vec2 u_mouse;
-uniform vec2 u_direction;
 
 const float PI = 3.14159265359;
 
-vec4 blur9(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
-    vec4 color = vec4(0.0);
-    vec2 off1 = vec2(1.3846153846) * direction;
-    vec2 off2 = vec2(3.2307692308) * direction;
-    color += texture2D(image, uv) * 0.2270270270;
-    color += texture2D(image, uv + (off1 / resolution)) * 0.3162162162;
-    color += texture2D(image, uv - (off1 / resolution)) * 0.3162162162;
-    color += texture2D(image, uv + (off2 / resolution)) * 0.0702702703;
-    color += texture2D(image, uv - (off2 / resolution)) * 0.0702702703;
-    return color;
-}
-
 void main() {
-    vec2 div   = 1.0 / u_resolution.xy;
-    vec2 uv    = gl_FragCoord.xy * div;
-    uv.y = 1.0 - uv.y;
-    vec2 coord = uv / div;
-    vec2 delta = vec2(u_mouse.x - coord.x, u_mouse.y - coord.y);
-    float distance = length(delta);
-    vec4 color = texture2D(u_image, uv);
-    if(distance < 60.) {
-        color = vec4(0);
-    }
-    gl_FragColor = color;
-}
-`;
-
-const renderFS = `
-#ifdef GL_ES
-precision highp float;
-#endif
-
-uniform sampler2D u_image;
-uniform vec2 u_resolution;
-uniform float m[20];
-
-void main() {
-    vec2 div   = 1.0 / u_resolution.xy;
-    vec2 uv    = gl_FragCoord.xy * div;
-    vec4 c = texture2D(u_image, uv);
-    gl_FragColor.r = m[0] * c.r + m[1] * c.g + m[2] * c.b + m[3] * c.a + m[4];
-	gl_FragColor.g = m[5] * c.r + m[6] * c.g + m[7] * c.b + m[8] * c.a + m[9];
-	gl_FragColor.b = m[10] * c.r + m[11] * c.g + m[12] * c.b + m[13] * c.a + m[14];
-    gl_FragColor.a = m[15] * c.r + m[16] * c.g + m[17] * c.b + m[18] * c.a + m[19];
+    gl_FragColor = vec4(1);
 }
 `;
 
 const QUAD = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+
+const coordAtSphere = (theta, phi) => {
+    const x = Math.sin(theta) * Math.cos(phi);
+    const y = Math.cos(theta);
+    const z = Math.sin(theta) * Math.sin(phi);
+    return [x, y, z];
+};
+
+const generateSphereCoords = (num = 100) => {
+    var vertices = [];
+    for(let i = 0; i < num; ++i) {
+        const theta = Math.random() * Math.PI;
+        const phi = Math.random() * 2 * Math.PI;
+        var coord = coordAtSphere(theta, phi);
+        vertices = vertices.concat(coord.map(c => c * 1));
+        var t = Math.random() * 0.2 + 1.1;
+        vertices = vertices.concat(coord.map(c => c * t));
+    }
+    return new Float32Array(vertices);
+};
 
 class Background extends Component {
 
@@ -91,6 +68,8 @@ class Background extends Component {
         this.frameId = null;
         this.matModelView = null;
         this.matProjection = null;
+        this.vertices = generateSphereCoords(2000);
+        this.dist = 3000;
     }
 
     componentDidMount() {
@@ -104,7 +83,7 @@ class Background extends Component {
         window.addEventListener('resize', this.updateViewportDimension);
         document.addEventListener('mousemove', this.updateMousePosition);
 
-        this.program = glUtils.program(this.gl, quadVS, blurFS);
+        this.program = glUtils.program(this.gl, vs, fs);
         this.buffer = glUtils.buffer(this.gl);
         this.matModelView = mat4.create();
         this.matProjection = mat4.create();
@@ -124,15 +103,17 @@ class Background extends Component {
 
     loop() {
         this.frameId = requestAnimationFrame(this.loop);
-        /*
+        
         this.gl.useProgram(this.program);
-        this.texture.bind(0, this.program.u_image);
-        this.buffer.data(QUAD, this.program.a_position, 2);
-        this.gl.uniform2fv(this.program.u_resolution, new Float32Array([this.canvas.width, this.canvas.height]));
-        this.gl.uniform2fv(this.program.u_mouse, this.mouse);
+        this.buffer.data(this.vertices, this.program.a_position, 3);
+        // this.gl.uniform2fv(this.program.u_resolution, new Float32Array([this.canvas.width, this.canvas.height]));
+        // this.gl.uniform2fv(this.program.u_mouse, this.mouse);
+        mat4.lookAt(this.matModelView, [0, 0, this.dist / 1000], [0, 0, 0], [0, 1, 0]);
+        this.gl.uniformMatrix4fv(this.program.u_modelview, false, this.matModelView);
+        this.gl.uniformMatrix4fv(this.program.u_projection, false, this.matProjection);
         glUtils.reset(this.gl, this.state.viewportWidth, this.state.viewportHeight, true);
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, QUAD.length / 2);
-        */
+        this.gl.drawArrays(this.gl.LINES, 0, this.vertices.length / 6);
+        
     }
 
     updateViewportDimension() {
@@ -152,7 +133,7 @@ class Background extends Component {
                 ref="canvas"
                 width={this.state.viewportWidth}
                 height={this.state.viewportHeight}
-                style={{ zIndex: 1, filter: 'blur(5px) contrast(25)' }}
+                style={{ zIndex: 1 }}
             />
         );
     }
