@@ -14,7 +14,7 @@ uniform mat4 u_projection;
 void main() {
     vec4 pos = vec4(a_position, 1);
     gl_Position = u_projection * u_modelview * pos;
-    gl_PointSize = 1.0;
+    gl_PointSize = 2.0;
 }
 `;
 
@@ -26,7 +26,7 @@ precision highp float;
 const float PI = 3.14159265359;
 
 void main() {
-    gl_FragColor = vec4(vec3(0.4), 1);
+    gl_FragColor = vec4(vec3(0.6), 1);
 }
 `;
 
@@ -39,18 +39,23 @@ const coordAtSphere = (theta, phi) => {
     return [x, y, z];
 };
 
-const generateSphereCoords = (num = 100) => {
+const generateSphereCoords = (num = 100, line = true) => {
     var vertices = [];
-    for(let i = 0; i < num; ++i) {
+    for (let i = 0; i < num; ++i) {
         const theta = Math.random() * Math.PI;
         const phi = Math.random() * 2 * Math.PI;
         var coord = coordAtSphere(theta, phi);
-        vertices = vertices.concat(coord.map(c => c * 1));
-        var t = Math.random() * 0.2 + 1.2;
-        vertices = vertices.concat(coord.map(c => c * t));
+        vertices = vertices.concat(coord);
+        if (line) {
+            var t = Math.random() * 0.2 + 1.2;
+            vertices = vertices.concat(coord.map(c => c * t));
+        }
     }
     return new Float32Array(vertices);
 };
+
+const lineVertices = generateSphereCoords(200);
+const dotVertices = generateSphereCoords(200, false);
 
 class Background extends Component {
 
@@ -63,14 +68,19 @@ class Background extends Component {
         this.updateViewportDimension = this.updateViewportDimension.bind(this);
         this.loop = this.loop.bind(this);
         this.setupViewport = this.setupViewport.bind(this);
+        this.updateCameraPosition = this.updateCameraPosition.bind(this);
         this.mouse = new Float32Array([0, 0]);
         this.program = null;
         this.buffer = null;
         this.frameId = null;
         this.matModelView = null;
         this.matProjection = null;
-        this.vertices = generateSphereCoords(200);
-        this.dist = 3000;
+        this.dist = 2.6;
+        this.camX = 0;
+        this.camY = 0;
+        this.camZ = 0;
+        this.camAngleX = 0;
+        this.camAngleY = 1;
     }
 
     componentDidMount() {
@@ -83,10 +93,8 @@ class Background extends Component {
         this.updateViewportDimension();
         window.addEventListener('resize', this.updateViewportDimension);
         document.addEventListener('mousemove', this.updateMousePosition);
-
         this.program = glUtils.program(this.gl, vs, fs);
         this.buffer = glUtils.buffer(this.gl);
-        
     }
 
     componentWillUnmount() {
@@ -97,18 +105,18 @@ class Background extends Component {
 
     loop() {
         this.frameId = requestAnimationFrame(this.loop);
-        
+
         this.gl.useProgram(this.program);
-        this.buffer.data(this.vertices, this.program.a_position, 3);
-        var camX = 3 * Math.cos((new Date()).getTime() * 0.001);
-        var camZ = 3 * Math.sin((new Date()).getTime() * 0.001);
-        mat4.lookAt(this.matModelView, [camX, 0, camZ], [0, 0, 0], [0, 1, 0]);
+        this.buffer.data(lineVertices, this.program.a_position, 3);
+        this.updateCameraPosition();
+        const camera = [this.camX, this.camY, this.camZ];
+        mat4.lookAt(this.matModelView, camera, [0, 0, 0], [0, 1, 0]);
         this.gl.uniformMatrix4fv(this.program.u_modelview, false, this.matModelView);
         this.gl.uniformMatrix4fv(this.program.u_projection, false, this.matProjection);
         glUtils.reset(this.gl, this.state.viewportWidth, this.state.viewportHeight, true);
-        this.gl.drawArrays(this.gl.LINES, 0, this.vertices.length / 6);
-        this.gl.drawArrays(this.gl.POINTS, 0, this.vertices.length / 3);
-        
+        this.gl.drawArrays(this.gl.LINES, 0, lineVertices.length / 6);
+        this.buffer.data(dotVertices, this.program.a_position, 3);
+        this.gl.drawArrays(this.gl.POINTS, 0, dotVertices.length / 3);
     }
 
     updateViewportDimension() {
@@ -130,7 +138,22 @@ class Background extends Component {
     }
 
     updateMousePosition = (event) => {
-        this.mouse = new Float32Array([event.pageX, event.pageY]);
+        const pageX = event.pageX;
+        const pageY = event.pageY;
+        const halfWidth = this.state.viewportWidth / 2;
+        const halfHeight = this.state.viewportHeight / 2;
+        this.camAngleX = (pageX / halfWidth) - 1;
+        this.camAngleY = (pageY / halfHeight) - 1;
+        if (this.camAngleY > 1) {
+            // this.camAngleY -= 1;
+            // this.camAngleY = 1 - this.camAngleY;
+        }
+    }
+
+    updateCameraPosition() {
+        this.camX = this.dist * Math.cos(this.camAngleX);
+        this.camY = this.dist * Math.cos(this.camAngleY);
+        this.camZ = this.dist * Math.sin(this.camAngleX);
     }
 
     render() {
