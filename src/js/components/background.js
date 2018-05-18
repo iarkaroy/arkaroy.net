@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { mat4 } from 'gl-matrix';
+import { glMatrix, mat4 } from 'gl-matrix';
 import * as glUtils from '../webgl-utils';
 
 const vs = `
@@ -8,12 +8,13 @@ precision highp float;
 #endif
 
 attribute vec3 a_position;
-uniform mat4 u_modelview;
+uniform mat4 u_world;
+uniform mat4 u_view;
 uniform mat4 u_projection;
 
 void main() {
     vec4 pos = vec4(a_position, 1);
-    gl_Position = u_projection * u_modelview * pos;
+    gl_Position = u_projection * u_view * u_world * pos;
     gl_PointSize = 2.0;
 }
 `;
@@ -55,7 +56,7 @@ const generateSphereCoords = (num = 100, line = true) => {
 };
 
 const lineVertices = generateSphereCoords(200);
-const dotVertices = generateSphereCoords(200, false);
+const dotVertices = generateSphereCoords(500, false);
 
 class Background extends Component {
 
@@ -73,14 +74,12 @@ class Background extends Component {
         this.program = null;
         this.buffer = null;
         this.frameId = null;
-        this.matModelView = null;
-        this.matProjection = null;
-        this.dist = 2.6;
-        this.camX = 0;
-        this.camY = 0;
-        this.camZ = 0;
-        this.camAngleX = 0;
-        this.camAngleY = 1;
+        this.matWorld = new Float32Array(16);
+        this.matView = new Float32Array(16);
+        this.matProjection = new Float32Array(16);
+        this.matIdentity = new Float32Array(16);
+        this.angleX = 0;
+        this.angleY = 0;
     }
 
     componentDidMount() {
@@ -108,10 +107,11 @@ class Background extends Component {
 
         this.gl.useProgram(this.program);
         this.buffer.data(lineVertices, this.program.a_position, 3);
-        this.updateCameraPosition();
-        const camera = [this.camX, this.camY, this.camZ];
-        mat4.lookAt(this.matModelView, camera, [0, 0, 0], [0, 1, 0]);
-        this.gl.uniformMatrix4fv(this.program.u_modelview, false, this.matModelView);
+        
+        mat4.rotateX(this.matWorld, this.matIdentity, this.angleX);
+        mat4.rotateY(this.matWorld, this.matWorld, this.angleY);
+        this.gl.uniformMatrix4fv(this.program.u_world, false, this.matWorld);
+        this.gl.uniformMatrix4fv(this.program.u_view, false, this.matView);
         this.gl.uniformMatrix4fv(this.program.u_projection, false, this.matProjection);
         glUtils.reset(this.gl, this.state.viewportWidth, this.state.viewportHeight, true);
         this.gl.drawArrays(this.gl.LINES, 0, lineVertices.length / 6);
@@ -127,11 +127,10 @@ class Background extends Component {
     }
 
     setupViewport() {
-        this.matModelView = mat4.create();
-        this.matProjection = mat4.create();
-        mat4.perspective(this.matProjection, 45, window.innerWidth / window.innerHeight, 0.1, 100.0);
-        mat4.identity(this.matModelView);
-
+        mat4.identity(this.matWorld);
+        mat4.lookAt(this.matView, [0, 0, 3], [0, 0, 0], [0, 1, 0]);
+        mat4.perspective(this.matProjection, glMatrix.toRadian(45), window.innerWidth / window.innerHeight, 0.1, 100.0);
+        mat4.identity(this.matIdentity);
         if (!this.frameId) {
             this.frameId = requestAnimationFrame(this.loop);
         }
@@ -142,18 +141,16 @@ class Background extends Component {
         const pageY = event.pageY;
         const halfWidth = this.state.viewportWidth / 2;
         const halfHeight = this.state.viewportHeight / 2;
-        this.camAngleX = (pageX / halfWidth) - 1;
-        this.camAngleY = (pageY / halfHeight) - 1;
-        if (this.camAngleY > 1) {
-            // this.camAngleY -= 1;
-            // this.camAngleY = 1 - this.camAngleY;
-        }
+        this.angleY = (pageX / halfWidth) - 1;
+        this.angleY *= -1;
+        this.angleX = (pageY / halfHeight) - 1;
+        this.angleX *= -1;
     }
 
     updateCameraPosition() {
-        this.camX = this.dist * Math.cos(this.camAngleX);
-        this.camY = this.dist * Math.cos(this.camAngleY);
-        this.camZ = this.dist * Math.sin(this.camAngleX);
+        // this.camX = this.dist * Math.cos(this.camAngleX);
+        // this.camY = this.dist * Math.cos(this.camAngleY);
+        // this.camZ = this.dist * Math.sin((this.camAngleY + this.camAngleX)/2);
     }
 
     render() {
