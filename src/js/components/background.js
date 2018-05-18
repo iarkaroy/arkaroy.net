@@ -69,7 +69,6 @@ class Background extends Component {
         this.updateViewportDimension = this.updateViewportDimension.bind(this);
         this.loop = this.loop.bind(this);
         this.setupViewport = this.setupViewport.bind(this);
-        this.updateCameraPosition = this.updateCameraPosition.bind(this);
         this.mouse = new Float32Array([0, 0]);
         this.program = null;
         this.buffer = null;
@@ -145,12 +144,6 @@ class Background extends Component {
         this.angleY *= -1;
         this.angleX = (pageY / halfHeight) - 1;
         this.angleX *= -1;
-    }
-
-    updateCameraPosition() {
-        // this.camX = this.dist * Math.cos(this.camAngleX);
-        // this.camY = this.dist * Math.cos(this.camAngleY);
-        // this.camZ = this.dist * Math.sin((this.camAngleY + this.camAngleX)/2);
     }
 
     render() {
