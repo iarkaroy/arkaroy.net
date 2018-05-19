@@ -27,7 +27,7 @@ precision highp float;
 const float PI = 3.14159265359;
 
 void main() {
-    gl_FragColor = vec4(vec3(0.6), 1);
+    gl_FragColor = vec4(vec3(0.4), 1);
 }
 `;
 
@@ -48,7 +48,7 @@ const generateSphereCoords = (num = 100, line = true) => {
         var coord = coordAtSphere(theta, phi);
         vertices = vertices.concat(coord);
         if (line) {
-            var t = Math.random() * 0.2 + 1.2;
+            var t = Math.random() * 0.6 + 0.8;
             vertices = vertices.concat(coord.map(c => c * t));
         }
     }
@@ -56,7 +56,7 @@ const generateSphereCoords = (num = 100, line = true) => {
 };
 
 const lineVertices = generateSphereCoords(200);
-const dotVertices = generateSphereCoords(500, false);
+const dotVertices = generateSphereCoords(100, false);
 
 class Background extends Component {
 
@@ -79,6 +79,8 @@ class Background extends Component {
         this.matIdentity = new Float32Array(16);
         this.angleX = 0;
         this.angleY = 0;
+        this.velocityX = 0;
+        this.velocityY = 0;
     }
 
     componentDidMount() {
@@ -106,7 +108,8 @@ class Background extends Component {
 
         this.gl.useProgram(this.program);
         this.buffer.data(lineVertices, this.program.a_position, 3);
-        
+        this.angleX += this.velocityX;
+        this.angleY += this.velocityY;
         mat4.rotateX(this.matWorld, this.matIdentity, this.angleX);
         mat4.rotateY(this.matWorld, this.matWorld, this.angleY);
         this.gl.uniformMatrix4fv(this.program.u_world, false, this.matWorld);
@@ -116,6 +119,8 @@ class Background extends Component {
         this.gl.drawArrays(this.gl.LINES, 0, lineVertices.length / 6);
         this.buffer.data(dotVertices, this.program.a_position, 3);
         this.gl.drawArrays(this.gl.POINTS, 0, dotVertices.length / 3);
+        this.velocityX *= 0.98;
+        this.velocityY *= 0.98;
     }
 
     updateViewportDimension() {
@@ -127,7 +132,7 @@ class Background extends Component {
 
     setupViewport() {
         mat4.identity(this.matWorld);
-        mat4.lookAt(this.matView, [0, 0, 3], [0, 0, 0], [0, 1, 0]);
+        mat4.lookAt(this.matView, [0, 0, 4], [0, 0, 0], [0, 1, 0]);
         mat4.perspective(this.matProjection, glMatrix.toRadian(45), window.innerWidth / window.innerHeight, 0.1, 100.0);
         mat4.identity(this.matIdentity);
         if (!this.frameId) {
@@ -140,10 +145,8 @@ class Background extends Component {
         const pageY = event.pageY;
         const halfWidth = this.state.viewportWidth / 2;
         const halfHeight = this.state.viewportHeight / 2;
-        this.angleY = (pageX / halfWidth) - 1;
-        this.angleY *= -1;
-        this.angleX = (pageY / halfHeight) - 1;
-        this.angleX *= -1;
+        this.velocityY = -((pageX / halfWidth) - 1) * 0.01;
+        this.velocityX = -((pageY / halfHeight) - 1) * 0.01;
     }
 
     render() {
