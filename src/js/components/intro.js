@@ -38,7 +38,7 @@ class Intro extends Component {
             viewportWidth: window.innerWidth,
             viewportHeight: window.innerHeight
         });
-        var font = new FontFaceObserver('Montserrat', {
+        var font = new FontFaceObserver('Barlow', {
             weight: 900
         });
         font.load().then(this.setup, this.setup);
@@ -50,8 +50,9 @@ class Intro extends Component {
             angle: -45,
             segments: 20,
             fontWeight: '900',
-            fontFamily: 'Montserrat',
-            fillColor: '#f0f0f0'
+            fontFamily: 'Barlow',
+            fillColor: '#f0f0f0',
+            fontSize: 160
         }).get();
         var sliceWidth = this.slices[0] ? this.slices[0].width : 0;
         var sliceHeight = this.slices[0] ? this.slices[0].height : 0;
