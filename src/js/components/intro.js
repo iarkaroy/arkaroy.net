@@ -17,11 +17,14 @@ class Intro extends Component {
         this.renderCanvas = this.renderCanvas.bind(this);
         this.animateIn = this.animateIn.bind(this);
         this.animateOut = this.animateOut.bind(this);
+        this.sliceAngle = -45;
+        this.frameId = null;
     }
 
     componentDidMount() {
         this.canvas = this.refs.canvas;
         this.ctx = this.canvas.getContext('2d');
+        this.slice = null;
         this.slices = [];
         this.options = {};
         this.animation = null;
@@ -46,15 +49,17 @@ class Intro extends Component {
     }
 
     setup() {
-        this.slices = new Slices({
+        this.slice = new Slices({
             text: 'DEMO',
-            angle: -45,
+            angle: this.sliceAngle,
             segments: 20,
             fontWeight: '900',
             fontFamily: 'Barlow',
             fillColor: '#f0f0f0',
             fontSize: 240
-        }).get();
+        });
+        console.log(this.slice);
+        this.slices = this.slice.get();
         var sliceWidth = this.slices[0] ? this.slices[0].width : 0;
         var sliceHeight = this.slices[0] ? this.slices[0].height : 0;
         var centerX = (this.canvas.width - sliceWidth) / 2;
@@ -86,8 +91,24 @@ class Intro extends Component {
                 return Math.floor(Math.random() * 800);
             },
             update: this.renderCanvas,
+            complete: () => {
+                if(!this.frameId)
+                this.frameId = requestAnimationFrame(this.renderRot);
+            }
         });
     }
+
+    renderRot = () => {
+        this.frameId = requestAnimationFrame(this.renderRot);
+        this.sliceAngle += 0.5;
+        this.slices = this.slice.setAngle(this.sliceAngle).get();
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        var len = this.slices.length;
+        for (var i = 0; i < len; ++i) {
+            var slice = this.slices[i];
+            this.ctx.drawImage(slice.canvas, this.options.centerX, this.options.centerY);
+        }
+    };
 
     animateOut(callback) {
         this.animation.set({

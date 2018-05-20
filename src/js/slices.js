@@ -14,9 +14,10 @@ var document = window.document;
 
 export default class Slices {
 
-    constructor(options) {
+    constructor(options = {}) {
         this.slices = [];
         this.options = Object.assign({}, defaults, options);
+        this.image = null;
         if (this.options.image) {
             this.initImage();
         }
@@ -30,7 +31,8 @@ export default class Slices {
         var img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = function () {
-            self.make(img);
+            this.image = img;
+            self.make();
         };
         img.src = this.options.image;
     }
@@ -50,16 +52,23 @@ export default class Slices {
         ctx.textAlign = 'center';
         ctx.fillStyle = o.fillColor;
         ctx.fillText(o.text, w / 2 + 10, h / 2);
-        this.make(ctx.canvas);
+        this.image = ctx.canvas;
+        this.make();
     }
 
-    make(image) {
+    setAngle(angle = 0) {
+        this.options.angle = angle;
+        this.make();
+        return this;
+    }
+
+    make() {
         var w, h, rad, sin, cos, nw, nh, sh, i;
         var o = this.options;
 
         // Dimension of image
-        w = image.width;
-        h = image.height;
+        w = this.image.width;
+        h = this.image.height;
 
         // Convert degree to radian
         rad = o.angle * Math.PI / 180;
@@ -82,11 +91,11 @@ export default class Slices {
             ctx.canvas.height = h;
             ctx.save();
             ctx.translate(w / 2, h / 2);
-            ctx.rotate(o.angle * Math.PI / 180);
+            ctx.rotate(rad);
             ctx.rect(-nw / 2, sh * i - nh / 2, nw, sh);
             ctx.restore();
             ctx.clip();
-            ctx.drawImage(image, 0, 0);
+            ctx.drawImage(this.image, 0, 0);
             this.slices.push(new Slice(ctx.canvas));
         }
     }
@@ -98,10 +107,11 @@ export default class Slices {
 }
 
 class Slice {
-    constructor(canvas) {
+    constructor(canvas, options = {}) {
         this.canvas = canvas;
         this.width = this.canvas.width;
         this.height = this.canvas.height;
+        this.options = Object.assign({}, options);
     }
 }
 
