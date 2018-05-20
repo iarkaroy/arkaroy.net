@@ -115,7 +115,7 @@ class Background extends Component {
         this.gl.uniformMatrix4fv(this.program.u_world, false, this.matWorld);
         this.gl.uniformMatrix4fv(this.program.u_view, false, this.matView);
         this.gl.uniformMatrix4fv(this.program.u_projection, false, this.matProjection);
-        glUtils.reset(this.gl, this.state.viewportWidth, this.state.viewportHeight, true);
+        glUtils.reset(this.gl, this.state.viewportWidth * 2, this.state.viewportHeight * 2, true);
         this.gl.drawArrays(this.gl.LINES, 0, lineVertices.length / 6);
         this.buffer.data(dotVertices, this.program.a_position, 3);
         this.gl.drawArrays(this.gl.POINTS, 0, dotVertices.length / 3);
@@ -133,7 +133,7 @@ class Background extends Component {
     setupViewport() {
         mat4.identity(this.matWorld);
         mat4.lookAt(this.matView, [0, 0, 4], [0, 0, 0], [0, 1, 0]);
-        mat4.perspective(this.matProjection, glMatrix.toRadian(45), window.innerWidth / window.innerHeight, 0.1, 100.0);
+        mat4.perspective(this.matProjection, glMatrix.toRadian(45), this.canvas.width / this.canvas.height, 0.1, 100.0);
         mat4.identity(this.matIdentity);
         if (!this.frameId) {
             this.frameId = requestAnimationFrame(this.loop);
@@ -153,9 +153,9 @@ class Background extends Component {
         return (
             <canvas
                 ref="canvas"
-                width={this.state.viewportWidth}
-                height={this.state.viewportHeight}
-                style={{ zIndex: 1 }}
+                width={this.state.viewportWidth * 2}
+                height={this.state.viewportHeight * 2}
+                style={{ zIndex: 1, width: this.state.viewportWidth, height: this.state.viewportHeight }}
             />
         );
     }

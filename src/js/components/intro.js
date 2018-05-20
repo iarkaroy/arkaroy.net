@@ -37,11 +37,12 @@ class Intro extends Component {
         this.setState({
             viewportWidth: window.innerWidth,
             viewportHeight: window.innerHeight
+        }, () => {
+            var font = new FontFaceObserver('Barlow', {
+                weight: 900
+            });
+            font.load().then(this.setup, this.setup);
         });
-        var font = new FontFaceObserver('Barlow', {
-            weight: 900
-        });
-        font.load().then(this.setup, this.setup);
     }
 
     setup() {
@@ -52,7 +53,7 @@ class Intro extends Component {
             fontWeight: '900',
             fontFamily: 'Barlow',
             fillColor: '#f0f0f0',
-            fontSize: 160
+            fontSize: 240
         }).get();
         var sliceWidth = this.slices[0] ? this.slices[0].width : 0;
         var sliceHeight = this.slices[0] ? this.slices[0].height : 0;
@@ -66,8 +67,8 @@ class Intro extends Component {
         for (var i = 0; i < this.slices.length; ++i) {
             var slice = this.slices[i];
             slice.y = possibleYs[Math.floor(Math.random() * possibleYs.length)];
-            slice.x = (slice.y - (this.state.viewportHeight - slice.height) / 2) / Math.tan(-45 * Math.PI / 180);
-            slice.x += (this.state.viewportWidth - slice.width) / 2;
+            slice.x = (slice.y - (this.canvas.height - slice.height) / 2) / Math.tan(-45 * Math.PI / 180);
+            slice.x += (this.canvas.width - slice.width) / 2;
             slice.o = 0;
         }
         this.animateIn();
@@ -108,9 +109,9 @@ class Intro extends Component {
         return (
             <canvas
                 ref="canvas"
-                width={this.state.viewportWidth}
-                height={this.state.viewportHeight}
-                style={{ zIndex: 2 }}
+                width={this.state.viewportWidth * 2}
+                height={this.state.viewportHeight * 2}
+                style={{ zIndex: 2, width: this.state.viewportWidth, height: this.state.viewportHeight }}
             />
         );
     }
