@@ -125,11 +125,22 @@ function getStartValues(options = {}, props = []) {
 }
 
 function getEndValues(options = {}, props = []) {
-    var values = {};
-    forEach(props, p => {
-        values[p] = options[p];
+    var values = [];
+    forEach(options.targets, (target, i) => {
+        var value = {};
+        forEach(props, prop => {
+            if(is.fnc(options[prop])) {
+                value[prop] = options[prop](target, i);
+            }
+            if(is.arr(options[prop])) {
+                value[prop] = options[prop][i];
+            }
+            if(is.num(options[prop])) {
+                value[prop] = options[prop];
+            }
+        });
+        values.push(value);
     });
-    if (!is.arr(values)) values = Array(options.targets.length).fill(values);
     return values;
 }
 
