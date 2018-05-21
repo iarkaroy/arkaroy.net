@@ -31,27 +31,26 @@ export default class Slices {
         var img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = function () {
-            this.image = img;
+            self.image = img;
             self.make();
         };
         img.src = this.options.image;
     }
 
     initText() {
-        var o, font, ctx, w, h;
+        var o, font, ctx, size;
         o = this.options;
         font = `${o.fontWeight} ${o.fontSize}px ${o.fontFamily}`;
         ctx = createContext();
         ctx.font = font;
-        w = ctx.measureText(o.text).width;
-        h = Math.ceil(o.fontSize * 1.2);
-        ctx.canvas.width = w + 20;
-        ctx.canvas.height = h;
+        size = ctx.measureText(o.text).width + 20;
+        ctx.canvas.width = size;
+        ctx.canvas.height = size;
         ctx.font = font;
         ctx.textBaseline = 'middle';
         ctx.textAlign = 'center';
         ctx.fillStyle = o.fillColor;
-        ctx.fillText(o.text, w / 2 + 10, h / 2);
+        ctx.fillText(o.text, size / 2, size / 2);
         this.image = ctx.canvas;
         this.make();
     }
@@ -63,7 +62,7 @@ export default class Slices {
     }
 
     make() {
-        var w, h, rad, sin, cos, nw, nh, sh, i;
+        var w, h, rad, sin, cos, nw, nh, sh;
         var o = this.options;
 
         // Dimension of image
@@ -74,8 +73,8 @@ export default class Slices {
         rad = o.angle * Math.PI / 180;
 
         // Sine and cosine of radian
-        sin = Math.abs(Math.sin(rad));
-        cos = Math.abs(Math.cos(rad));
+        sin = Math.abs(Math.sin(45 * Math.PI / 180));
+        cos = Math.abs(Math.cos(45 * Math.PI / 180));
 
         // Dimension of rotated image
         nw = w * cos + h * sin;
@@ -85,7 +84,7 @@ export default class Slices {
         sh = nh / o.segments;
 
         this.slices = [];
-        for (i = 0; i < o.segments; ++i) {
+        for (let i = 0; i < o.segments; ++i) {
             var ctx = createContext();
             ctx.canvas.width = w;
             ctx.canvas.height = h;
