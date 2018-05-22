@@ -52,6 +52,11 @@ export default class Slices {
         ctx.fillStyle = o.fillColor;
         ctx.fillText(o.text, size / 2, size / 2);
         this.image = ctx.canvas;
+        const fixedAngle = 45;
+        const sin = Math.abs(Math.sin(fixedAngle * Math.PI / 180));
+        const cos = Math.abs(Math.cos(fixedAngle * Math.PI / 180));
+        this.image.boundingWidth = this.image.width * cos + this.image.height * sin;
+        this.image.boundingHeight = this.image.height * cos + this.image.width * sin;
         this.make();
     }
 
@@ -73,19 +78,22 @@ export default class Slices {
         rad = o.angle * Math.PI / 180;
 
         // Sine and cosine of radian
-        sin = Math.abs(Math.sin(45 * Math.PI / 180));
-        cos = Math.abs(Math.cos(45 * Math.PI / 180));
+        // sin = Math.abs(Math.sin(45 * Math.PI / 180));
+        // cos = Math.abs(Math.cos(45 * Math.PI / 180));
 
         // Dimension of rotated image
-        nw = w * cos + h * sin;
-        nh = h * cos + w * sin;
+        // nw = w * cos + h * sin;
+        // nh = h * cos + w * sin;
+
+        nw = this.image.boundingWidth;
+        nh = this.image.boundingHeight;
 
         // Height of per piece
         sh = nh / o.segments;
 
         if (!update)
             this.slices = [];
-        
+
         for (let i = 0; i < o.segments; ++i) {
             var ctx = createContext();
             ctx.canvas.width = w;
@@ -96,8 +104,8 @@ export default class Slices {
             ctx.rect(-nw / 2, sh * i - nh / 2, nw, sh);
             ctx.restore();
             ctx.clip();
-            ctx.drawImage(this.image, 0, 0);
-            if(update) {
+            ctx.drawImage(this.image, 0, 0, w, h);
+            if (update) {
                 this.slices[i].canvas = ctx.canvas;
             } else {
                 this.slices.push(new Slice(ctx.canvas));

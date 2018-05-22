@@ -51,32 +51,36 @@ class Intro extends Component {
     }
 
     setup() {
+        const fontSize = 240;
         this.slice = new Slices({
-            text: 'DEMO',
+            text: 'DEMO DEMO',
             angle: this.sliceAngle,
-            segments: 20,
+            segments: 25,
             fontWeight: '900',
             fontFamily: 'Barlow',
             fillColor: '#f0f0f0',
-            fontSize: 240
+            fontSize: fontSize
         });
 
         this.slices = this.slice.get();
-        var sliceWidth = this.slices[0] ? this.slices[0].width : 0;
-        var sliceHeight = this.slices[0] ? this.slices[0].height : 0;
-        var centerX = (this.canvas.width - sliceWidth) / 2;
-        var centerY = (this.canvas.height - sliceHeight) / 2;
-        var possibleYs = [
+        const sliceWidth = this.slices[0] ? this.slices[0].width : 0;
+        const sliceHeight = this.slices[0] ? this.slices[0].height : 0;
+        const centerX = (this.canvas.width - sliceWidth) / 2;
+        const centerY = (this.canvas.height - sliceHeight) / 2;
+        const possibleYs = [
             centerY - sliceHeight,
             centerY + sliceHeight
         ];
         this.options = { sliceWidth, sliceHeight, centerX, centerY, possibleYs };
+        const textHeight = fontSize * 1.2;
+        const textCenterY = (this.canvas.height - textHeight) / 2;
         this.bounds = {
             x1: centerX,
-            y1: centerY,
+            y1: textCenterY,
             x2: centerX + sliceWidth,
-            y2: centerY + sliceHeight
+            y2: textCenterY + textHeight
         };
+
         for (var i = 0; i < this.slices.length; ++i) {
             var slice = this.slices[i];
             slice.origin(centerX, centerY); //.angle(this.sliceAngle).offset(centerY + sliceHeight).calc();
@@ -111,12 +115,10 @@ class Intro extends Component {
         const is = this.isInBounds(pageX * 2, pageY * 2);
         if (is && !this.withinBounds) {
             this.withinBounds = true;
-            console.log('enter');
             this.onEnter();
         }
         if (!is && this.withinBounds) {
             this.withinBounds = false;
-            console.log('leave');
             this.onLeave();
         }
     };
@@ -143,7 +145,7 @@ class Intro extends Component {
             }
         });
     };
-    
+
     onLeave = () => {
         if (this.frameId) {
             cancelAnimationFrame(this.frameId);
@@ -173,6 +175,7 @@ class Intro extends Component {
 
     renderRotation = () => {
         this.frameId = requestAnimationFrame(this.renderRotation);
+        var t0 = performance.now();
         this.sliceAngle += 0.5;
         this.slices = this.slice.setAngle(this.sliceAngle).get();
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -182,6 +185,8 @@ class Intro extends Component {
             slice.angle(this.sliceAngle).calc();
             this.ctx.drawImage(slice.canvas, slice.x, slice.y);
         }
+        var t1 = performance.now();
+        // console.log(t1-t0);
     };
 
     animateOut(callback) {
