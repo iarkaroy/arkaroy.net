@@ -57,11 +57,11 @@ export default class Slices {
 
     setAngle(angle = 0) {
         this.options.angle = angle;
-        this.make();
+        this.make(true);
         return this;
     }
 
-    make() {
+    make(update = false) {
         var w, h, rad, sin, cos, nw, nh, sh;
         var o = this.options;
 
@@ -83,7 +83,9 @@ export default class Slices {
         // Height of per piece
         sh = nh / o.segments;
 
-        this.slices = [];
+        if (!update)
+            this.slices = [];
+        
         for (let i = 0; i < o.segments; ++i) {
             var ctx = createContext();
             ctx.canvas.width = w;
@@ -95,7 +97,11 @@ export default class Slices {
             ctx.restore();
             ctx.clip();
             ctx.drawImage(this.image, 0, 0);
-            this.slices.push(new Slice(ctx.canvas));
+            if(update) {
+                this.slices[i].canvas = ctx.canvas;
+            } else {
+                this.slices.push(new Slice(ctx.canvas));
+            }
         }
     }
 
@@ -111,6 +117,24 @@ class Slice {
         this.width = this.canvas.width;
         this.height = this.canvas.height;
         this.options = Object.assign({}, options);
+    }
+    origin(x = 0, y = 0) {
+        this.options.origin = { x, y };
+        return this;
+    }
+    offset(d = 0) {
+        this.options.offset = Math.random() < 0.5 ? d : d * -1;
+        return this;
+    }
+    angle(a = 0) {
+        this.options.angle = a;
+        return this;
+    }
+    calc() {
+        const o = this.options;
+        this.x = Math.cos(o.angle * Math.PI / 180) * o.offset + o.origin.x;
+        this.y = Math.sin(o.angle * Math.PI / 180) * o.offset + o.origin.y;
+        return this;
     }
 }
 
