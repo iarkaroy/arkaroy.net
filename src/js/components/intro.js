@@ -18,7 +18,8 @@ class Intro extends Component {
         this.animateIn = this.animateIn.bind(this);
         this.animateOut = this.animateOut.bind(this);
         this.sliceAngle = -45;
-        this.frameId = null;
+        this.withinBounds = false;
+        this.frameId = 0;
     }
 
     componentDidMount() {
@@ -34,6 +35,7 @@ class Intro extends Component {
 
     componentWillUnmount() {
         window.removeEventListener('resize', this.updateViewportDimension);
+        document.removeEventListener('mousemove', this.onMouseMove, false);
     }
 
     updateViewportDimension() {
@@ -58,7 +60,7 @@ class Intro extends Component {
             fillColor: '#f0f0f0',
             fontSize: 240
         });
-        console.log(this.slice);
+
         this.slices = this.slice.get();
         var sliceWidth = this.slices[0] ? this.slices[0].width : 0;
         var sliceHeight = this.slices[0] ? this.slices[0].height : 0;
@@ -69,8 +71,15 @@ class Intro extends Component {
             centerY + sliceHeight
         ];
         this.options = { sliceWidth, sliceHeight, centerX, centerY, possibleYs };
+        this.bounds = {
+            x1: centerX,
+            y1: centerY,
+            x2: centerX + sliceWidth,
+            y2: centerY + sliceHeight
+        };
         for (var i = 0; i < this.slices.length; ++i) {
             var slice = this.slices[i];
+            slice.origin(centerX, centerY); //.angle(this.sliceAngle).offset(centerY + sliceHeight).calc();
             slice.y = possibleYs[Math.floor(Math.random() * possibleYs.length)];
             slice.x = (slice.y - (this.canvas.height - slice.height) / 2) / Math.tan(-45 * Math.PI / 180);
             slice.x += (this.canvas.width - slice.width) / 2;
@@ -92,28 +101,111 @@ class Intro extends Component {
             },
             update: this.renderCanvas,
             complete: () => {
-                if(!this.frameId)
-                this.frameId = requestAnimationFrame(this.renderRot);
+                document.addEventListener('mousemove', this.onMouseMove, false);
             }
         });
     }
 
-    renderRot = () => {
-        this.frameId = requestAnimationFrame(this.renderRot);
+    onMouseMove = (event) => {
+        const { pageX, pageY } = event;
+        const is = this.isInBounds(pageX * 2, pageY * 2);
+        if (is && !this.withinBounds) {
+            this.withinBounds = true;
+            console.log('enter');
+            this.onEnter();
+        }
+        if (!is && this.withinBounds) {
+            this.withinBounds = false;
+            console.log('leave');
+            this.onLeave();
+        }
+    };
+
+    onEnter = () => {
+        this.slices.forEach(slice => {
+            slice.angle(this.sliceAngle).offset(Math.random() * 20 + 10);
+        });
+
+        animate({
+            targets: this.slices,
+            x: (target, i) => {
+                return Math.cos(target.options.angle * Math.PI / 180) * target.options.offset + target.options.origin.x;
+            },
+            y: (target, i) => {
+                return Math.sin(target.options.angle * Math.PI / 180) * target.options.offset + target.options.origin.y;
+            },
+            easing: 'linear',
+            duration: 300,
+            update: this.renderCanvas,
+            complete: () => {
+                if (!this.frameId)
+                    this.frameId = requestAnimationFrame(this.renderRotation);
+            }
+        });
+    };
+    
+    onLeave = () => {
+        if (this.frameId) {
+            cancelAnimationFrame(this.frameId);
+            this.frameId = 0;
+        }
+
+        animate({
+            targets: this.slices,
+            x: (target, i) => {
+                return target.options.origin.x;
+            },
+            y: (target, i) => {
+                return target.options.origin.y;
+            },
+            easing: 'linear',
+            duration: 300,
+            update: this.renderCanvas
+        });
+    };
+
+    isInBounds = (x, y) => {
+        return x >= this.bounds.x1
+            && x <= this.bounds.x2
+            && y >= this.bounds.y1
+            && y <= this.bounds.y2;
+    }
+
+    renderRotation = () => {
+        this.frameId = requestAnimationFrame(this.renderRotation);
         this.sliceAngle += 0.5;
         this.slices = this.slice.setAngle(this.sliceAngle).get();
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         var len = this.slices.length;
         for (var i = 0; i < len; ++i) {
             var slice = this.slices[i];
-            this.ctx.drawImage(slice.canvas, this.options.centerX, this.options.centerY);
+            slice.angle(this.sliceAngle).calc();
+            this.ctx.drawImage(slice.canvas, slice.x, slice.y);
         }
     };
 
     animateOut(callback) {
-        this.animation.set({
+        animate({
+            targets: this.slices,
+            y: (target, i) => {
+                target.toY = target.options.angle === 0 ? target.options.origin.y : this.options.possibleYs[Math.floor(Math.random() * this.options.possibleYs.length)];
+                return target.toY;
+            },
+            x: (target, i) => {
+                var toX;
+                if (target.options.angle === 0) {
+                    toX = Math.random() < 0.5 ? -target.width : this.canvas.width;
+                } else {
+                    toX = (target.toY - (this.canvas.height - target.height) / 2) / Math.tan(target.options.angle * Math.PI / 180);
+                    toX += (this.canvas.width - target.width) / 2;
+                }
+                return toX;
+            },
+            duration: 600,
+            easing: 'quintIn',
+            update: this.renderCanvas,
             complete: callback
-        }).reverse();
+        });
     }
 
     renderCanvas() {
