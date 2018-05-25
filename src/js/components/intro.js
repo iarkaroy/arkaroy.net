@@ -85,11 +85,16 @@ class Intro extends Component {
                 }
             }
         };
-        this.angle = 20;
+        this.angle = -45;
         this.size = 0;
         this.divs = 40;
+        this.initPoints = [];
+        this.initV1 = [];
+        this.initV2 = [];
         this.offsets = new Float32Array([]);
         this.points = new Float32Array([]);
+        this.v1 = new Float32Array([]);
+        this.v2 = new Float32Array([]);
         this.gl = null;
         this.simulationProgram = null;
         this.renderProgram = null;
@@ -107,11 +112,27 @@ class Intro extends Component {
             font.load().then(this.generateImage, this.generateImage);
             this.initWebGL();
         });
+        window.addEventListener('resize', this.onResize, false);
     }
+
+    componentWillUnmount() {
+        if (this.frameId) {
+            cancelAnimationFrame(this.frameId);
+            this.frameId = 0;
+        }
+        window.removeEventListener('resize', this.onResize);
+    }
+
+    onResize = () => {
+        this.updateViewport(() => {
+            this.generateImage();
+            this.initWebGL();
+        });
+    };
 
     loop = () => {
         var t0 = performance.now();
-        
+
         this.frameId = requestAnimationFrame(this.loop);
 
         const { width, height } = this.state.viewport;
@@ -129,8 +150,8 @@ class Intro extends Component {
         this.fbo.bind();
         glUtils.reset(this.gl, width, height, true);
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, QUAD.length / 2);
-        this.angle += 0.5;
-        this.generateBoundingBox();
+        // this.angle += 0.5;
+        // this.calculateRotatedPoints();
 
         program = this.renderProgram;
         this.gl.useProgram(program);
@@ -140,8 +161,9 @@ class Intro extends Component {
         this.fbo.unbind();
         glUtils.reset(this.gl, width, height, true);
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, QUAD.length / 2);
-        
+
         var t1 = performance.now();
+        // console.log(performance.memory.usedJSHeapSize / 1048576);
     };
 
     initWebGL = () => {
@@ -178,48 +200,47 @@ class Intro extends Component {
 
     generateBoundingBox = () => {
         const { width, height, center } = this.state.viewport;
-        var points = [];
+
         const leftX = center.x - this.size / 2;
-        const rightX = center.x + this.size / 2;
         const topY = center.y - this.size / 2;
-        points.push(
-            leftX, topY,    // Top Left Corner
-            rightX, topY    // Top Right Corner
-        );
         const inc = this.size / this.divs;
-        for (let i = 1; i <= this.divs; ++i) {
+
+        this.initPoints = [];
+        this.initPoints.push(
+            leftX, topY,    // Top Left Corner
+        );
+
+        for (let i = 1; i < this.divs; ++i) {
             const increment = inc * i;
             const y = topY + increment;
-            points.push(
+            this.initPoints.push(
                 leftX, y,   // Left Point
-                rightX, y   // Right Point
             );
         }
-        var rotatedPoints = [];
-        for (let i = 0; i < points.length; i += 2) {
-            const rotated = this.rotatePoint(points[i], points[i + 1]);
-            rotatedPoints = rotatedPoints.concat(rotated);
-        }
-
-        this.v1 = new Float32Array([
-            rotatedPoints[2] - rotatedPoints[0],
-            rotatedPoints[3] - rotatedPoints[1]
-        ]);
-        this.v2 = new Float32Array([
-            rotatedPoints[4] - rotatedPoints[0],
-            rotatedPoints[5] - rotatedPoints[1]
-        ]);
-        var filteredPoints = [];
-        for (let i = 0; i < rotatedPoints.length; i += 4) {
-            if (filteredPoints.length < this.divs * 2) {
-                filteredPoints.push(rotatedPoints[i], rotatedPoints[i + 1]);
-            }
-        }
-        this.points = new Float32Array(filteredPoints);
+        
+        this.initV1 = [
+            this.size,
+            0
+        ];
+        this.initV2 = [
+            0,
+            inc - 1
+        ];
+        this.calculateRotatedPoints();
     };
 
-    rotatePoint = (x, y) => {
-        const { center } = this.state.viewport;
+    calculateRotatedPoints = () => {
+        var rotatedPoints = [];
+        for (let i = 0; i < this.initPoints.length; i += 2) {
+            const rotated = this.rotatePoint(this.initPoints[i], this.initPoints[i + 1]);
+            rotatedPoints = rotatedPoints.concat(rotated);
+        }
+        this.v1 = new Float32Array(this.rotatePoint(this.initV1[0], this.initV1[1], { x: 0, y: 0 }));
+        this.v2 = new Float32Array(this.rotatePoint(this.initV2[0], this.initV2[1], { x: 0, y: 0 }));
+        this.points = new Float32Array(rotatedPoints);
+    };
+
+    rotatePoint = (x, y, center = this.state.viewport.center) => {
         var rad = (Math.PI / 180) * this.angle,
             cos = Math.cos(rad),
             sin = Math.sin(rad),
@@ -232,8 +253,8 @@ class Intro extends Component {
         var offsets = [];
         for (let i = 1; i <= this.divs; ++i) {
             const o = Math.random() * 10 + 10;
-            offsets.push(Math.random() < 0.5 ? o : -o);
-            // offsets.push(0);
+            // offsets.push(Math.random() < 0.5 ? o : -o);
+            offsets.push(0);
         }
         this.offsets = new Float32Array(offsets);
     };
