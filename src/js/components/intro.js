@@ -22,31 +22,41 @@ precision highp float;
 uniform sampler2D u_texture;
 uniform vec2 u_resolution;
 uniform float u_angle;
-uniform float u_offsets[40];
-uniform vec2 u_points[40];
+uniform float u_offsets[25];
+uniform vec2 u_points[25];
 uniform vec2 u_v1;
 uniform vec2 u_v2;
 
-const int TOTAL = 40;
+const int TOTAL = 25;
 
 void main() {
     vec2 div = 1.0 / u_resolution;
     vec2 uv = gl_FragCoord.xy * div;
     vec4 color = vec4(0);
+    float _cos = cos( u_angle );
+    float _sin = sin( u_angle );
+    float dot_v1 = dot( u_v1, u_v1 );
+    float dot_v2 = dot( u_v2, u_v2 );
     for(int i = 0; i < TOTAL; ++i) {
         float offset = u_offsets[i];
         vec2 point = u_points[i];
         vec2 disp = vec2(
-            cos(u_angle) * offset,
-            sin(u_angle) * offset
+            _cos * offset,
+            _sin * offset
         );
         vec2 offsetPoint = point + disp;
         vec2 relPoint = gl_FragCoord.xy - offsetPoint;
+        
         // 0<=dot_product(v,v1)<=dot_product(v1,v1) and 0<=dot_product(v,v2)<=dot_product(v2,v2)
-        if( dot( relPoint, u_v1 ) >= 0.0 && dot( relPoint, u_v1 ) <= dot( u_v1, u_v1 ) && dot( relPoint, u_v2 ) >= 0.0 && dot( relPoint, u_v2 ) <= dot( u_v2, u_v2 ) ) {
+        
+        float dot_pv1 = dot( relPoint, u_v1 );
+        float dot_pv2 = dot( relPoint, u_v2 );
+        
+        if( dot_pv1 >= 0.0 && dot_pv1 <= dot_v1 && dot_pv2 >= 0.0 && dot_pv2 <= dot_v2 ) {
             vec2 realUV = gl_FragCoord.xy - disp;
             uv = realUV * div;
             color = texture2D( u_texture, uv );
+            break;
         }
     }
     gl_FragColor = color;
@@ -87,7 +97,7 @@ class Intro extends Component {
         };
         this.angle = -45;
         this.size = 0;
-        this.divs = 40;
+        this.divs = 25;
         this.initPoints = [];
         this.initV1 = [];
         this.initV2 = [];
