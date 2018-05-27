@@ -1,6 +1,10 @@
 import React, { Component } from 'react';
 import FontFaceObserver from 'fontfaceobserver';
 import * as glUtils from '../webgl-utils';
+import animate from '../animate';
+
+const QUAD = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+const DIVS = 30;
 
 const vsQuad = `
 #ifdef GL_ES
@@ -22,12 +26,12 @@ precision highp float;
 uniform sampler2D u_texture;
 uniform vec2 u_resolution;
 uniform float u_angle;
-uniform float u_offsets[25];
-uniform vec2 u_points[25];
+uniform float u_offsets[${DIVS}];
+uniform vec2 u_points[${DIVS}];
 uniform vec2 u_v1;
 uniform vec2 u_v2;
 
-const int TOTAL = 25;
+const int TOTAL = ${DIVS};
 
 void main() {
     vec2 div = 1.0 / u_resolution;
@@ -79,8 +83,6 @@ void main() {
 }
 `;
 
-const QUAD = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
-
 class Intro extends Component {
 
     constructor(props) {
@@ -97,11 +99,10 @@ class Intro extends Component {
         };
         this.angle = -45;
         this.size = 0;
-        this.divs = 25;
         this.initPoints = [];
         this.initV1 = [];
         this.initV2 = [];
-        this.offsets = new Float32Array([]);
+        this.offsets = [];
         this.points = new Float32Array([]);
         this.v1 = new Float32Array([]);
         this.v2 = new Float32Array([]);
@@ -112,10 +113,13 @@ class Intro extends Component {
         this.texture = null;
         this.fbo = null;
         this.frameId = 0;
+        this.hoverArea = {};
+        this.isHovered = false;
     }
 
     componentDidMount() {
         this.updateViewport(() => {
+            this.fontSize = 280;
             const font = new FontFaceObserver('Barlow', {
                 weight: 900
             });
@@ -131,6 +135,7 @@ class Intro extends Component {
             this.frameId = 0;
         }
         window.removeEventListener('resize', this.onResize);
+        document.removeEventListener('mousemove', this.onMouseMove);
     }
 
     onResize = () => {
@@ -140,30 +145,91 @@ class Intro extends Component {
         });
     };
 
+    onMouseMove = (event) => {
+        var { pageX, pageY } = event;
+        pageX *= 2;
+        pageY *= 2;
+        const hovering = this.isHovering(pageX, pageY);
+        if (hovering && !this.isHovered) {
+            this.isHovered = true;
+            this.onHoverEnter();
+        }
+        if (!hovering && this.isHovered) {
+            this.isHovered = false;
+            this.onHoverLeave();
+        }
+    };
+
+    onHoverEnter = () => {
+        this.generateOffsets(0);
+        animate({
+            targets: this.offsets,
+            value: (target, index) => {
+                const o = Math.random() * 20 + 10;
+                return Math.random() < 0.5 ? o : -o;
+            },
+            duration: 300,
+            easing: 'linear',
+            update: this.draw,
+            complete: () => {
+                if (!this.frameId)
+                    this.frameId = requestAnimationFrame(this.loop);
+            }
+        });
+    };
+
+    onHoverLeave = () => {
+        if (this.frameId) {
+            cancelAnimationFrame(this.frameId);
+            this.frameId = 0;
+        }
+        animate({
+            targets: this.offsets,
+            value: 0,
+            duration: 300,
+            easing: 'linear',
+            update: this.draw
+        });
+    }
+
+    isHovering = (x, y) => {
+        const { x1, y1, x2, y2 } = this.hoverArea;
+        return x >= x1 && x <= x2 && y >= y1 && y <= y2;
+    };
+
     loop = () => {
-        var t0 = performance.now();
-
         this.frameId = requestAnimationFrame(this.loop);
+        this.angle += 0.4;
+        this.calculateRotatedPoints();
+        this.draw();
+    };
 
+    draw = () => {
+        this.drawSimulation();
+        this.drawRender();
+    };
+
+    drawSimulation = () => {
         const { width, height } = this.state.viewport;
-
         var program = this.simulationProgram;
         this.gl.useProgram(program);
         this.texture.bind(0, program.u_texture);
         this.buffer.data(QUAD, program.a_position, 2);
         this.gl.uniform2fv(program.u_resolution, new Float32Array([width, height]));
         this.gl.uniform1f(program.u_angle, this.angle * Math.PI / 180);
-        this.gl.uniform1fv(program.u_offsets, this.offsets);
+        var offsets = new Float32Array(this.offsets.map(o => o.value));
+        this.gl.uniform1fv(program.u_offsets, offsets);
         this.gl.uniform2fv(program.u_points, this.points);
         this.gl.uniform2fv(program.u_v1, this.v1);
         this.gl.uniform2fv(program.u_v2, this.v2);
         this.fbo.bind();
         glUtils.reset(this.gl, width, height, true);
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, QUAD.length / 2);
-        // this.angle += 0.5;
-        // this.calculateRotatedPoints();
+    };
 
-        program = this.renderProgram;
+    drawRender = () => {
+        const { width, height } = this.state.viewport;
+        var program = this.renderProgram;
         this.gl.useProgram(program);
         this.fbo.texture0.bind(0, program.u_texture);
         this.buffer.data(QUAD, program.a_position, 2);
@@ -171,9 +237,6 @@ class Intro extends Component {
         this.fbo.unbind();
         glUtils.reset(this.gl, width, height, true);
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, QUAD.length / 2);
-
-        var t1 = performance.now();
-        // console.log(performance.memory.usedJSHeapSize / 1048576);
     };
 
     initWebGL = () => {
@@ -187,7 +250,7 @@ class Intro extends Component {
 
     generateImage = () => {
         const text = 'DEMO TEXT';
-        const font = '900 280px Barlow, sans-serif';
+        const font = `900 ${this.fontSize}px Barlow, sans-serif`;
         const { width, height } = this.state.viewport;
         const ctx = document.createElement('canvas').getContext('2d');
         ctx.font = font;
@@ -203,9 +266,50 @@ class Intro extends Component {
         const rad = 45 * Math.PI / 180;
         this.size = size * Math.cos(rad) + size * Math.sin(rad);
         this.generateBoundingBox();
-        this.generateOffsets();
-        if (!this.frameId)
-            this.frameId = requestAnimationFrame(this.loop);
+        this.generateHoverArea(size);
+        var offsetHeight = height / 2 + this.fontSize * 0.6;
+        this.generateOffsets(offsetHeight / Math.sin(this.angle * Math.PI / 180));
+        this.animateIn();
+    };
+
+    animateIn = () => {
+        animate({
+            targets: this.offsets,
+            value: 0,
+            duration: 600,
+            easing: 'backOut',
+            delay: () => {
+                return Math.random() * 800
+            },
+            update: this.draw,
+            complete: () => {
+                document.addEventListener('mousemove', this.onMouseMove);
+            }
+        });
+    };
+
+    animateOut = (callback) => {
+        const { width, height } = this.state.viewport;
+        const offsetHeight = height / 2 + this.fontSize * 0.6;
+        var offset = 0;
+        if(this.angle == 0) {
+            offset = width / 2 + this.fontSize * 2.5;
+        } else {
+            offset = offsetHeight / Math.sin(this.angle * Math.PI / 180);
+        }
+        animate({
+            targets: this.offsets,
+            value: (target, index) => {
+                return Math.random() < 0.5 ? offset : -offset;
+            },
+            duration: 600,
+            easing: 'quintIn',
+            delay: () => {
+                return Math.random() * 800
+            },
+            update: this.draw,
+            complete: callback
+        });
     };
 
     generateBoundingBox = () => {
@@ -213,21 +317,21 @@ class Intro extends Component {
 
         const leftX = center.x - this.size / 2;
         const topY = center.y - this.size / 2;
-        const inc = this.size / this.divs;
+        const inc = this.size / DIVS;
 
         this.initPoints = [];
         this.initPoints.push(
             leftX, topY,    // Top Left Corner
         );
 
-        for (let i = 1; i < this.divs; ++i) {
+        for (let i = 1; i < DIVS; ++i) {
             const increment = inc * i;
             const y = topY + increment;
             this.initPoints.push(
                 leftX, y,   // Left Point
             );
         }
-        
+
         this.initV1 = [
             this.size,
             0
@@ -259,14 +363,27 @@ class Intro extends Component {
         return [nx, ny];
     };
 
-    generateOffsets = () => {
-        var offsets = [];
-        for (let i = 1; i <= this.divs; ++i) {
-            const o = Math.random() * 10 + 10;
-            // offsets.push(Math.random() < 0.5 ? o : -o);
-            offsets.push(0);
+    generateHoverArea = (w = 0) => {
+        const h = this.fontSize * 1.0;
+        const { width, height } = this.state.viewport;
+        const left = (width - w) / 2;
+        const top = (height - h) / 2;
+        this.hoverArea = {
+            x1: left,
+            y1: top,
+            x2: left + w,
+            y2: top + h
+        };
+    };
+
+    generateOffsets = (distance = 1200) => {
+        this.offsets = [];
+        for (let i = 1; i <= DIVS; ++i) {
+            const variation = distance * 0.04;
+            const offset = Math.random() * variation + distance;
+            const value = Math.random() < 0.5 ? offset : -offset;
+            this.offsets.push({ value });
         }
-        this.offsets = new Float32Array(offsets);
     };
 
     updateViewport = (callback = null) => {

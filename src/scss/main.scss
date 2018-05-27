@@ -85,10 +85,10 @@ header.header {
     left: 0;
     z-index: 998;
     path:nth-of-type(1) {
-        fill: #f0f0f0;
+        fill: rgba(255, 255, 255, 0.4); // #f0f0f0;
     }
     path:nth-of-type(2) {
-        fill: #e0e0e0;
+        fill: rgba(255, 255, 255, 0.4); // #e0e0e0;
     }
 }
 .menu {
