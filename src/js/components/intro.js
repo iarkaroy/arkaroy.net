@@ -16,13 +16,11 @@ class Intro extends Component {
         this.bgImageData = null;
         this.hrPoints = [];
         this.vrPoints = [];
+        this.currPoint = null;
         this.points = [];
-        this.divPoints = [];
-        this.finalPoints = [];
-        this.orderedPoints = [];
-        this.sPoint = null;
-        this.ePoint = null;
-        this.divs = 2;
+        this.editMode = false;
+        this.dragging = false;
+        this.selectedPoint = -1;
     }
 
     componentDidMount() {
@@ -34,6 +32,8 @@ class Intro extends Component {
             });
             font.load().then(this.updateBg, this.updateBg);
         });
+        document.addEventListener('mousedown', this.onMouseDown);
+        document.addEventListener('mouseup', this.onMouseUp);
         document.addEventListener('mousemove', this.onMouseMove);
         document.addEventListener('click', this.onClick);
         document.addEventListener('keyup', this.onKeyUp);
@@ -46,90 +46,65 @@ class Intro extends Component {
         document.removeEventListener('keyup', this.onKeyUp);
     }
 
-    onMouseMove = (event) => {
-        const { pageX, pageY, altKey, ctrlKey, shiftKey } = event;
-        if (shiftKey)
-            this.calculateEdgeAtCol(pageX, pageY);
-        else
-            this.calculateEdgeAtRow(pageY, pageX);
-
-        if (ctrlKey) {
-            var nearestPoint = null;
-            var dist = 9999;
-            this.finalPoints.forEach(point => {
-                var dx = point[0] - pageX;
-                var dy = point[1] - pageY;
-                var distance = Math.sqrt(dx * dx + dy * dy);
-                if (distance < dist) {
-                    dist = distance;
-                    if (distance < 20) {
-                        nearestPoint = [
-                            point[0],
-                            point[1]
-                        ];
-                    }
-                }
-            });
-            if (nearestPoint && this.orderedPoints.indexOf(nearestPoint) < 0) {
-                this.orderedPoints.push(nearestPoint);
-                this.finalPoints = this.finalPoints.filter(point => {
-                    return point[0] != nearestPoint[0] || point[1] != nearestPoint[1];
-                });
+    onMouseDown = event => {
+        const { pageX, pageY } = event;
+        this.points.forEach((point, index) => {
+            const dx = pageX - point[0];
+            const dy = pageY - point[1];
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist <= 4) {
+                this.selectedPoint = index;
+                this.dragging = true;
             }
+        });
+    };
+
+    onMouseUp = event => {
+        this.dragging = false;
+    };
+
+    onMouseMove = event => {
+        const { pageX, pageY, altKey, ctrlKey, shiftKey } = event;
+        if (this.editMode) {
+            if (this.dragging) {
+
+            }
+        } else {
+            if (shiftKey) this.calculateEdgeAtCol(pageX, pageY);
+            else this.calculateEdgeAtRow(pageY, pageX);
         }
+
     };
 
     onClick = (event) => {
-        if (this.points.length < 1) return false;
-        const point = this.points[0];
-        // if (!this.sPoint) this.sPoint = point;
-        // else this.ePoint = point;
-        this.orderedPoints.push(point);
-        this.points = [];
+        if (!this.currPoint || this.editMode) return false;
+        this.points.push([
+            this.currPoint[0],
+            this.currPoint[1]
+        ]);
+        console.log(this.points);
     };
 
     onKeyUp = (event) => {
         const { keyCode, altKey, ctrlKey, shiftKey } = event;
         switch (keyCode) {
             case 13:
-                if (shiftKey) {
-                    this.finalPoints = this.finalPoints.concat(this.divPoints);
-                    this.divPoints = [];
-                    this.sPoint = this.ePoint = null;
-                } else if(ctrlKey) {
+                if (ctrlKey) {
                     var output = '';
-                    this.orderedPoints.forEach(point => {
+                    this.points.forEach(point => {
                         output += `points.push(new Point(${point[0]}, ${point[1]}));\n`;
                     });
                     console.log(output);
-                } else
-                    this.calculateDivPoints();
+                } else {
+                    this.editMode = !this.editMode;
+                }
                 break;
             case 38:
-                this.divs++;
-                this.calculateDivPoints();
                 break;
             case 40:
-                this.divs--;
-                this.calculateDivPoints();
                 break;
         }
     }
-
-    calculateDivPoints = () => {
-        if (!this.sPoint || !this.ePoint) return false;
-        var div = [
-            (this.ePoint[0] - this.sPoint[0]) / this.divs,
-            (this.ePoint[1] - this.sPoint[1]) / this.divs,
-        ];
-        this.divPoints = [];
-        for (let i = 0; i <= this.divs; ++i) {
-            this.divPoints.push([
-                this.sPoint[0] + div[0] * i,
-                this.sPoint[1] + div[1] * i,
-            ]);
-        }
-    };
 
     updateBg = () => {
         const text = 'F';
@@ -141,11 +116,9 @@ class Intro extends Component {
         this.bgCtx.font = font;
         this.bgCtx.fillText(text, width / 2, height / 2);
         this.bgImageData = this.bgCtx.getImageData(0, 0, width, height);
-        // this.calculateEdges();
     };
 
     calculateEdgeAtRow = (y, centerX) => {
-        this.points = [];
         const { width, height, data } = this.bgImageData;
         const xMin = centerX - 20;
         const xMax = centerX + 20;
@@ -156,16 +129,15 @@ class Intro extends Component {
                 const prevIndex = index - 4;
                 const nextIndex = index + 4;
                 if (data[prevIndex + 3] > 0 && data[nextIndex + 3] == 0) {
-                    this.points.push([x, y]);
+                    this.currPoint = [x, y];
                 } else if (data[nextIndex + 3] > 0 && data[prevIndex + 3] == 0) {
-                    this.points.push([x, y]);
+                    this.currPoint = [x, y];
                 }
             }
         }
     }
 
     calculateEdgeAtCol = (x, centerY) => {
-        this.points = [];
         const { width, height, data } = this.bgImageData;
         const yMin = centerY - 20;
         const yMax = centerY + 20;
@@ -176,9 +148,9 @@ class Intro extends Component {
                 const prevIndex = index - width * 4;
                 const nextIndex = index + width * 4;
                 if (data[prevIndex + 3] > 0 && data[nextIndex + 3] == 0) {
-                    this.points.push([x, y]);
+                    this.currPoint = [x, y];
                 } else if (data[nextIndex + 3] > 0 && data[prevIndex + 3] == 0) {
-                    this.points.push([x, y]);
+                    this.currPoint = [x, y];
                 }
             }
         }
@@ -230,42 +202,22 @@ class Intro extends Component {
     renderFg = () => {
         requestAnimationFrame(this.renderFg);
         this.fgCtx.clearRect(0, 0, this.state.viewport.width, this.state.viewport.height);
-        this.points.forEach(point => {
+        if (this.currPoint) {
             this.fgCtx.beginPath();
-            this.fgCtx.arc(point[0], point[1], 1, 0, 2 * Math.PI);
+            this.fgCtx.arc(this.currPoint[0], this.currPoint[1], 1, 0, 2 * Math.PI);
             this.fgCtx.fillStyle = '#fff';
             this.fgCtx.fill();
-        });
-        this.divPoints.forEach(point => {
+        };
+        const radius = this.editMode ? 4 : 1;
+        this.points.forEach((point, index) => {
             this.fgCtx.beginPath();
-            this.fgCtx.arc(point[0], point[1], 1, 0, 2 * Math.PI);
-            this.fgCtx.fillStyle = '#0af';
-            this.fgCtx.fill();
-        });
-        this.finalPoints.forEach(point => {
-            this.fgCtx.beginPath();
-            this.fgCtx.arc(point[0], point[1], 1, 0, 2 * Math.PI);
-            this.fgCtx.fillStyle = '#ff0';
-            this.fgCtx.fill();
-        });
-        this.orderedPoints.forEach(point => {
-            this.fgCtx.beginPath();
-            this.fgCtx.arc(point[0], point[1], 1, 0, 2 * Math.PI);
+            this.fgCtx.arc(point[0], point[1], radius, 0, 2 * Math.PI);
             this.fgCtx.fillStyle = '#0f0';
-            this.fgCtx.fill();
+            this.fgCtx.strokeStyle = '#0f0';
+            this.fgCtx.lineWidth = 1;
+            this.editMode ? this.fgCtx.stroke() : this.fgCtx.fill();
+            if (this.selectedPoint === index) this.fgCtx.fill();
         });
-        if (this.sPoint) {
-            this.fgCtx.beginPath();
-            this.fgCtx.arc(this.sPoint[0], this.sPoint[1], 1, 0, 2 * Math.PI);
-            this.fgCtx.fillStyle = '#0af';
-            this.fgCtx.fill();
-        }
-        if (this.ePoint) {
-            this.fgCtx.beginPath();
-            this.fgCtx.arc(this.ePoint[0], this.ePoint[1], 1, 0, 2 * Math.PI);
-            this.fgCtx.fillStyle = '#0af';
-            this.fgCtx.fill();
-        }
     };
 
     updateViewport = (callback) => {
