@@ -82,8 +82,9 @@ class Intro extends Component {
     onClick = (event) => {
         if (this.points.length < 1) return false;
         const point = this.points[0];
-        if (!this.sPoint) this.sPoint = point;
-        else this.ePoint = point;
+        // if (!this.sPoint) this.sPoint = point;
+        // else this.ePoint = point;
+        this.orderedPoints.push(point);
         this.points = [];
     };
 
