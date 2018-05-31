@@ -49,8 +49,8 @@ class Intro extends Component {
     onMouseDown = event => {
         const { pageX, pageY } = event;
         this.points.forEach((point, index) => {
-            const dx = pageX - point[0];
-            const dy = pageY - point[1];
+            const dx = pageX - point.x;
+            const dy = pageY - point.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist <= 4) {
                 this.selectedPoint = index;
@@ -66,8 +66,11 @@ class Intro extends Component {
     onMouseMove = event => {
         const { pageX, pageY, altKey, ctrlKey, shiftKey } = event;
         if (this.editMode) {
-            if (this.dragging) {
-
+            if (this.dragging && this.selectedPoint >= 0) {
+                this.points[this.selectedPoint] = {
+                    x: pageX,
+                    y: pageY
+                };
             }
         } else {
             if (shiftKey) this.calculateEdgeAtCol(pageX, pageY);
@@ -78,10 +81,11 @@ class Intro extends Component {
 
     onClick = (event) => {
         if (!this.currPoint || this.editMode) return false;
-        this.points.push([
-            this.currPoint[0],
-            this.currPoint[1]
-        ]);
+        this.points.push({
+            x: this.currPoint[0],
+            y: this.currPoint[1]
+        });
+        this.currPoint = null;
         console.log(this.points);
     };
 
@@ -92,16 +96,24 @@ class Intro extends Component {
                 if (ctrlKey) {
                     var output = '';
                     this.points.forEach(point => {
-                        output += `points.push(new Point(${point[0]}, ${point[1]}));\n`;
+                        output += `points.push(new Point(${point.x}, ${point.y}));\n`;
                     });
                     console.log(output);
                 } else {
                     this.editMode = !this.editMode;
                 }
                 break;
-            case 38:
+            case 37:
+                if (this.selectedPoint > -1) this.points[this.selectedPoint].x--;
                 break;
+            case 38:
+                if (this.selectedPoint > -1) this.points[this.selectedPoint].y--;
+                break;
+            case 39:
+                if (this.selectedPoint > -1) this.points[this.selectedPoint].x++;
+                break
             case 40:
+                if (this.selectedPoint > -1) this.points[this.selectedPoint].y++;
                 break;
         }
     }
@@ -211,14 +223,57 @@ class Intro extends Component {
         const radius = this.editMode ? 4 : 1;
         this.points.forEach((point, index) => {
             this.fgCtx.beginPath();
-            this.fgCtx.arc(point[0], point[1], radius, 0, 2 * Math.PI);
+            this.fgCtx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
             this.fgCtx.fillStyle = '#0f0';
             this.fgCtx.strokeStyle = '#0f0';
             this.fgCtx.lineWidth = 1;
             this.editMode ? this.fgCtx.stroke() : this.fgCtx.fill();
             if (this.selectedPoint === index) this.fgCtx.fill();
         });
+        if (this.editMode) {
+            const len = this.points.length;
+            for (let i = 0; i < len; ++i) {
+                const prev = this.points[(i + len - 1) % len];
+                const point = this.points[i];
+                const next = this.points[(i + len + 1) % len];
+                const dPrev = this.distance(point, prev);
+                const dNext = this.distance(point, next);
+
+                const line = {
+                    x: next.x - prev.x,
+                    y: next.y - prev.y,
+                };
+                const dLine = Math.sqrt(line.x * line.x + line.y * line.y);
+
+                point.cPrev = {
+                    x: point.x - (line.x / dLine) * dPrev * 0.4,
+                    y: point.y - (line.y / dLine) * dPrev * 0.4,
+                };
+                point.cNext = {
+                    x: point.x + (line.x / dLine) * dNext * 0.4,
+                    y: point.y + (line.y / dLine) * dNext * 0.4,
+                };
+            }
+            this.fgCtx.beginPath();
+            this.fgCtx.moveTo(this.points[0].x - 300, this.points[0].y);
+            for (let p = 1; p < len; ++p) {
+                const cnx = this.points[(p + 0) % len].cNext.x;
+                const cny = this.points[(p + 0) % len].cNext.y;
+                const cpx = this.points[(p + 1) % len].cPrev.x;
+                const cpy = this.points[(p + 1) % len].cPrev.y;
+                const px = this.points[(p + 1) % len].x;
+                const py = this.points[(p + 1) % len].y;
+                this.fgCtx.bezierCurveTo(cnx - 300, cny, cpx - 300, cpy, px - 300, py);
+            }
+            this.fgCtx.closePath();
+            this.fgCtx.strokeStyle = '#fff';
+            this.fgCtx.stroke();
+        }
     };
+
+    distance = (p1, p2) => {
+        return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+    }
 
     updateViewport = (callback) => {
         this.setState({
