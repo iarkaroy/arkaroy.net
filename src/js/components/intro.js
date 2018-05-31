@@ -119,7 +119,7 @@ class Intro extends Component {
     }
 
     updateBg = () => {
-        const text = 'F';
+        const text = 'R';
         const font = `900 480px Barlow, sans-serif`;
         const { width, height } = this.state.viewport;
         this.bgCtx.textBaseline = 'middle';
@@ -245,13 +245,15 @@ class Intro extends Component {
                 };
                 const dLine = Math.sqrt(line.x * line.x + line.y * line.y);
 
+                const K = 0.3;
+
                 point.cPrev = {
-                    x: point.x - (line.x / dLine) * dPrev * 0.4,
-                    y: point.y - (line.y / dLine) * dPrev * 0.4,
+                    x: point.x - (line.x / dLine) * dPrev * K,
+                    y: point.y - (line.y / dLine) * dPrev * K,
                 };
                 point.cNext = {
-                    x: point.x + (line.x / dLine) * dNext * 0.4,
-                    y: point.y + (line.y / dLine) * dNext * 0.4,
+                    x: point.x + (line.x / dLine) * dNext * K,
+                    y: point.y + (line.y / dLine) * dNext * K,
                 };
             }
             this.fgCtx.beginPath();
@@ -268,6 +270,19 @@ class Intro extends Component {
             this.fgCtx.closePath();
             this.fgCtx.strokeStyle = '#fff';
             this.fgCtx.stroke();
+            for(let m = 0; m < len; ++m) {
+                const point = this.points[m];
+                this.fgCtx.beginPath();
+                this.fgCtx.moveTo(point.x, point.y);
+                this.fgCtx.lineTo(point.cPrev.x, point.cPrev.y);
+                this.fgCtx.strokeStyle = '#0f0';
+                this.fgCtx.stroke();
+                this.fgCtx.beginPath();
+                this.fgCtx.moveTo(point.x, point.y);
+                this.fgCtx.lineTo(point.cNext.x, point.cNext.y);
+                this.fgCtx.strokeStyle = '#0f0';
+                this.fgCtx.stroke();
+            }
         }
     };
 
