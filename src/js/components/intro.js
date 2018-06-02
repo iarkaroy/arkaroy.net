@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import FontFaceObserver from 'fontfaceobserver';
+import characters from '../characters';
 
 class Intro extends Component {
 
@@ -11,304 +11,150 @@ class Intro extends Component {
                 height: 0
             }
         };
-        this.bgCtx = null;
-        this.fgCtx = null;
-        this.bgImageData = null;
-        this.hrPoints = [];
-        this.vrPoints = [];
-        this.currPoint = null;
-        this.points = [];
-        this.editMode = false;
-        this.dragging = false;
-        this.selectedPoint = -1;
+        this.ctx = null;
     }
 
     componentDidMount() {
         this.updateViewport(() => {
-            this.bgCtx = this.bg.getContext('2d');
-            this.fgCtx = this.fg.getContext('2d');
-            const font = new FontFaceObserver('Barlow', {
-                weight: 900
+            this.ctx = this.canvas.getContext('2d');
+            this.ctx.globalCompositeOperation = 'xor';
+            var totalWidth = 0;
+            var diff = 25;
+            characters.forEach((char, i) => {
+                totalWidth += char.width;
+                if (i < characters.length - 1)
+                    totalWidth += diff;
             });
-            font.load().then(this.updateBg, this.updateBg);
-        });
-        document.addEventListener('mousedown', this.onMouseDown);
-        document.addEventListener('mouseup', this.onMouseUp);
-        document.addEventListener('mousemove', this.onMouseMove);
-        document.addEventListener('click', this.onClick);
-        document.addEventListener('keyup', this.onKeyUp);
-        requestAnimationFrame(this.renderFg);
-    }
-
-    componentWillUnmount() {
-        document.removeEventListener('mousemove', this.onMouseMove);
-        document.removeEventListener('click', this.onClick);
-        document.removeEventListener('keyup', this.onKeyUp);
-    }
-
-    onMouseDown = event => {
-        const { pageX, pageY } = event;
-        this.points.forEach((point, index) => {
-            const dx = pageX - point.x;
-            const dy = pageY - point.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= 4) {
-                this.selectedPoint = index;
-                this.dragging = true;
-            }
-        });
-    };
-
-    onMouseUp = event => {
-        this.dragging = false;
-    };
-
-    onMouseMove = event => {
-        const { pageX, pageY, altKey, ctrlKey, shiftKey } = event;
-        if (this.editMode) {
-            if (this.dragging && this.selectedPoint >= 0) {
-                this.points[this.selectedPoint] = {
-                    x: pageX,
-                    y: pageY
-                };
-            }
-        } else {
-            if (shiftKey) this.calculateEdgeAtCol(pageX, pageY);
-            else this.calculateEdgeAtRow(pageY, pageX);
-        }
-
-    };
-
-    onClick = (event) => {
-        if (!this.currPoint || this.editMode) return false;
-        this.points.push({
-            x: this.currPoint[0],
-            y: this.currPoint[1]
-        });
-        this.currPoint = null;
-        console.log(this.points);
-    };
-
-    onKeyUp = (event) => {
-        const { keyCode, altKey, ctrlKey, shiftKey } = event;
-        switch (keyCode) {
-            case 13:
-                if (ctrlKey) {
-                    var output = '';
-                    this.points.forEach(point => {
-                        output += `points.push(new Point(${point.x}, ${point.y}));\n`;
+            var scale = this.state.viewport.width / totalWidth;
+            console.log(scale);
+            var offset = 0;
+            characters.forEach(char => {
+                if (char.outer.length > 0) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(char.outer[0].p.x * scale + offset, char.outer[0].p.y * scale);
+                    char.outer.forEach((c, i) => {
+                        if (i === 0) return false;
+                        this.ctx.lineTo(c.p.x * scale + offset, c.p.y * scale);
                     });
-                    console.log(output);
-                } else {
-                    this.editMode = !this.editMode;
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.fill();
                 }
-                break;
-            case 37:
-                if (this.selectedPoint > -1) this.points[this.selectedPoint].x--;
-                break;
-            case 38:
-                if (this.selectedPoint > -1) this.points[this.selectedPoint].y--;
-                break;
-            case 39:
-                if (this.selectedPoint > -1) this.points[this.selectedPoint].x++;
-                break
-            case 40:
-                if (this.selectedPoint > -1) this.points[this.selectedPoint].y++;
-                break;
-        }
-    }
-
-    updateBg = () => {
-        const text = 'R';
-        const font = `900 480px Barlow, sans-serif`;
-        const { width, height } = this.state.viewport;
-        this.bgCtx.textBaseline = 'middle';
-        this.bgCtx.textAlign = 'center';
-        this.bgCtx.fillStyle = '#fff';
-        this.bgCtx.font = font;
-        this.bgCtx.fillText(text, width / 2, height / 2);
-        this.bgImageData = this.bgCtx.getImageData(0, 0, width, height);
-    };
-
-    calculateEdgeAtRow = (y, centerX) => {
-        const { width, height, data } = this.bgImageData;
-        const xMin = centerX - 20;
-        const xMax = centerX + 20;
-        for (let x = xMin; x < xMax; ++x) {
-            let index = y * width + x;
-            index *= 4;
-            if (data[index + 3] > 0) {
-                const prevIndex = index - 4;
-                const nextIndex = index + 4;
-                if (data[prevIndex + 3] > 0 && data[nextIndex + 3] == 0) {
-                    this.currPoint = [x, y];
-                } else if (data[nextIndex + 3] > 0 && data[prevIndex + 3] == 0) {
-                    this.currPoint = [x, y];
+                if (char.inner.length > 0) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(char.inner[0].p.x * scale + offset, char.inner[0].p.y * scale);
+                    char.inner.forEach((c, i) => {
+                        if (i === 0) return false;
+                        this.ctx.lineTo(c.p.x * scale + offset, c.p.y * scale);
+                    });
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.fill();
                 }
-            }
-        }
-    }
-
-    calculateEdgeAtCol = (x, centerY) => {
-        const { width, height, data } = this.bgImageData;
-        const yMin = centerY - 20;
-        const yMax = centerY + 20;
-        for (let y = yMin; y < yMax; ++y) {
-            let index = y * width + x;
-            index *= 4;
-            if (data[index + 3] > 0) {
-                const prevIndex = index - width * 4;
-                const nextIndex = index + width * 4;
-                if (data[prevIndex + 3] > 0 && data[nextIndex + 3] == 0) {
-                    this.currPoint = [x, y];
-                } else if (data[nextIndex + 3] > 0 && data[prevIndex + 3] == 0) {
-                    this.currPoint = [x, y];
-                }
-            }
-        }
-    };
-
-    calculateEdges = () => {
-        setTimeout(this.calculateHorizontalEdges, 0);
-        setTimeout(this.calculateVerticalEdges, 0);
-    };
-
-    calculateHorizontalEdges = () => {
-        const { width, height, data } = this.bgImageData;
-        for (let y = 0; y < height; y += 2) {
-            for (let x = 0; x < width; ++x) {
-                let index = y * width + x;
-                index *= 4;
-                if (data[index + 3] > 0) {
-                    const prevIndex = index - 4;
-                    const nextIndex = index + 4;
-                    if (data[prevIndex + 3] > 0 && data[nextIndex + 3] == 0) {
-                        this.hrPoints.push([x, y]);
-                    } else if (data[nextIndex + 3] > 0 && data[prevIndex + 3] == 0) {
-                        this.hrPoints.push([x, y]);
-                    }
-                }
-            }
-        }
-    };
-
-    calculateVerticalEdges = () => {
-        const { width, height, data } = this.bgImageData;
-        for (let x = 0; x < width; x += 2) {
-            for (let y = 0; y < height; ++y) {
-                let index = y * width + x;
-                index *= 4;
-                if (data[index + 3] > 0) {
-                    const prevIndex = index - width * 4;
-                    const nextIndex = index + width * 4;
-                    if (data[prevIndex + 3] > 0 && data[nextIndex + 3] == 0) {
-                        this.vrPoints.push([x, y]);
-                    } else if (data[nextIndex + 3] > 0 && data[prevIndex + 3] == 0) {
-                        this.vrPoints.push([x, y]);
-                    }
-                }
-            }
-        }
-    };
-
-    renderFg = () => {
-        requestAnimationFrame(this.renderFg);
-        this.fgCtx.clearRect(0, 0, this.state.viewport.width, this.state.viewport.height);
-        if (this.currPoint) {
-            this.fgCtx.beginPath();
-            this.fgCtx.arc(this.currPoint[0], this.currPoint[1], 1, 0, 2 * Math.PI);
-            this.fgCtx.fillStyle = '#fff';
-            this.fgCtx.fill();
-        };
-        const radius = this.editMode ? 4 : 1;
-        this.points.forEach((point, index) => {
-            this.fgCtx.beginPath();
-            this.fgCtx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
-            this.fgCtx.fillStyle = '#0f0';
-            this.fgCtx.strokeStyle = '#0f0';
-            this.fgCtx.lineWidth = 1;
-            this.editMode ? this.fgCtx.stroke() : this.fgCtx.fill();
-            if (this.selectedPoint === index) this.fgCtx.fill();
+                offset += char.width * scale + 25 * scale;
+            });
         });
-        if (this.editMode) {
-            const len = this.points.length;
-            for (let i = 0; i < len; ++i) {
-                const prev = this.points[(i + len - 1) % len];
-                const point = this.points[i];
-                const next = this.points[(i + len + 1) % len];
-                const dPrev = this.distance(point, prev);
-                const dNext = this.distance(point, next);
-
-                const line = {
-                    x: next.x - prev.x,
-                    y: next.y - prev.y,
-                };
-                const dLine = Math.sqrt(line.x * line.x + line.y * line.y);
-
-                const K = 0.3;
-
-                point.cPrev = {
-                    x: point.x - (line.x / dLine) * dPrev * K,
-                    y: point.y - (line.y / dLine) * dPrev * K,
-                };
-                point.cNext = {
-                    x: point.x + (line.x / dLine) * dNext * K,
-                    y: point.y + (line.y / dLine) * dNext * K,
-                };
-            }
-            this.fgCtx.beginPath();
-            this.fgCtx.moveTo(this.points[0].x - 300, this.points[0].y);
-            for (let p = 1; p < len; ++p) {
-                const cnx = this.points[(p + 0) % len].cNext.x;
-                const cny = this.points[(p + 0) % len].cNext.y;
-                const cpx = this.points[(p + 1) % len].cPrev.x;
-                const cpy = this.points[(p + 1) % len].cPrev.y;
-                const px = this.points[(p + 1) % len].x;
-                const py = this.points[(p + 1) % len].y;
-                this.fgCtx.bezierCurveTo(cnx - 300, cny, cpx - 300, cpy, px - 300, py);
-            }
-            this.fgCtx.closePath();
-            this.fgCtx.strokeStyle = '#fff';
-            this.fgCtx.stroke();
-            for(let m = 0; m < len; ++m) {
-                const point = this.points[m];
-                this.fgCtx.beginPath();
-                this.fgCtx.moveTo(point.x, point.y);
-                this.fgCtx.lineTo(point.cPrev.x, point.cPrev.y);
-                this.fgCtx.strokeStyle = '#0f0';
-                this.fgCtx.stroke();
-                this.fgCtx.beginPath();
-                this.fgCtx.moveTo(point.x, point.y);
-                this.fgCtx.lineTo(point.cNext.x, point.cNext.y);
-                this.fgCtx.strokeStyle = '#0f0';
-                this.fgCtx.stroke();
-            }
-        }
-    };
-
-    distance = (p1, p2) => {
-        return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
     }
 
-    updateViewport = (callback) => {
+    createCharacter = () => {
+        var outerPoints = [[548, 253], [548, 229], [548, 203], [552, 177], [560, 153], [574, 130], [591, 112], [614, 98], [637, 89], [664, 84], [691, 83], [718, 87], [744, 95], [764, 105], [784, 122], [801, 145], [810, 165], [816, 194], [817, 221], [817, 246], [817, 272], [817, 300], [815, 328], [808, 352], [797, 373], [783, 391], [763, 407], [741, 418], [716, 426], [692, 428], [664, 428], [637, 423], [613, 413], [590, 398], [573, 380], [561, 361], [552, 336], [548, 305], [548, 279]];
+        var innerPoints = [[638, 257], [638, 235], [639, 210], [644, 184], [661, 166], [685, 161], [709, 169], [722, 186], [726, 211], [727, 233], [727, 258], [727, 283], [726, 309], [719, 333], [703, 347], [685, 351], [662, 347], [646, 332], [640, 311], [638, 285]];
+        var minX = 9999, minY = 9999, maxX = 0, maxY = 0;
+        outerPoints.forEach(p => {
+            if (p[0] < minX) minX = p[0];
+            if (p[1] < minY) minY = p[1];
+            if (p[0] > maxX) maxX = p[0];
+            if (p[1] > maxY) maxY = p[1];
+        });
+        console.log(minX, minY, maxX, maxY);
+        const w = maxX - minX;
+        const h = maxY - minY;
+        var char = {
+            letter: 'O',
+            width: w,
+            height: h,
+            outer: [],
+            inner: []
+        };
+        outerPoints.forEach(p => {
+            char.outer.push(this.createPoint([
+                p[0] - minX,
+                p[1] - minY
+            ]));
+        });
+        innerPoints.forEach(p => {
+            char.inner.push(this.createPoint([
+                p[0] - minX,
+                p[1] - minY
+            ]));
+        })
+        console.log(char);
+    };
+
+    createPoint = point => {
+        return {
+            p: {
+                x: point[0],
+                y: point[1]
+            },
+            o: {
+                x: point[0],
+                y: point[1]
+            },
+            v: {
+                x: 0,
+                y: 0
+            }
+        };
+    };
+
+    updateViewport(callback) {
         this.setState({
             viewport: {
                 width: window.innerWidth,
                 height: window.innerHeight
             }
         }, callback);
-    };
+    }
 
     render() {
         const { width, height } = this.state.viewport;
         return (
-            <div>
-                <canvas ref={o => { this.bg = o; }} width={width} height={height} style={{ zIndex: 2, opacity: 0.2 }} />
-                <canvas ref={o => { this.fg = o; }} width={width} height={height} style={{ zIndex: 3 }} />
-            </div>
+            <canvas
+                ref={o => { this.canvas = o; }}
+                width={width}
+                height={height}
+                style={{ zIndex: 2 }}
+            />
         );
     }
 
 }
 
 export default Intro;
+
+/*
+
+A outer
+[551, 324],[561, 293],[572, 258],[583, 222],[594, 187],[605, 151],[615, 120],[623, 96],[633, 88],[661, 87],[695, 87],[731, 88],[741, 95],[750, 121],[759, 148],[767, 175],[778, 208],[789, 245],[800, 278],[810, 310],[821, 345],[832, 380],[841, 414],[838, 422],[812, 423],[783, 423],[757, 423],[747, 418],[741, 401],[737, 382],[731, 377],[702, 376],[670, 376],[636, 377],[628, 383],[623, 402],[618, 418],[608, 423],[586, 423],[559, 423],[531, 422],[524, 415],[533, 382],[541, 354]
+
+A inner
+[664, 250],[672, 221],[679, 198],[685, 198],[693, 222],[701, 251],[708, 277],[714, 301],[712, 308],[687, 309],[657, 308],[651, 303],[656, 280]
+
+R outer
+[554, 357],[554, 330],[554, 302],[554, 273],[554, 240],[554, 205],[554, 171],[554, 133],[555, 94],[561, 88],[596, 87],[630, 87],[665, 87],[692, 87],[722, 88],[752, 95],[777, 109],[796, 128],[809, 152],[815, 180],[814, 211],[807, 237],[790, 262],[763, 282],[758, 291],[769, 315],[782, 342],[794, 368],[805, 391],[817, 414],[813, 422],[790, 424],[761, 424],[735, 423],[722, 417],[712, 395],[701, 370],[692, 349],[681, 324],[671, 300],[666, 294],[650, 294],[645, 298],[644, 321],[644, 348],[644, 381],[644, 417],[636, 423],[614, 424],[588, 424],[565, 423],[555, 419],[554, 385]
+
+R inner
+[676, 225],[654, 225],[644, 220],[643, 196],[645, 169],[650, 164],[674, 163],[697, 165],[717, 175],[725, 196],[717, 216],[700, 224]
+
+K outer
+[506, 372],[506, 344],[506, 316],[506, 286],[506, 254],[506, 225],[506, 192],[506, 163],[507, 128],[512, 121],[541, 120],[564, 120],[591, 121],[596, 128],[596, 157],[596, 181],[596, 208],[596, 235],[604, 235],[621, 211],[637, 188],[653, 166],[667, 146],[684, 125],[695, 121],[720, 120],[748, 120],[779, 121],[782, 126],[767, 149],[754, 167],[739, 188],[724, 208],[704, 236],[685, 263],[685, 276],[697, 298],[713, 323],[729, 350],[745, 377],[760, 404],[776, 429],[785, 446],[783, 454],[760, 455],[730, 455],[699, 455],[686, 449],[674, 429],[662, 407],[651, 388],[638, 365],[621, 338],[614, 337],[598, 361],[596, 373],[596, 401],[596, 422],[596, 449],[592, 455],[568, 455],[541, 455],[514, 455],[507, 451],[506, 425],[506, 399]
+
+Y outer
+[637, 363],[637, 335],[637, 313],[636, 304],[627, 285],[617, 264],[606, 241],[596, 218],[584, 194],[574, 171],[563, 148],[552, 125],[539, 94],[542, 88],[572, 87],[603, 87],[629, 88],[636, 95],[644, 114],[654, 140],[664, 165],[672, 186],[679, 202],[685, 202],[692, 186],[701, 164],[710, 142],[720, 117],[729, 94],[736, 88],[761, 87],[790, 87],[820, 88],[825, 94],[817, 116],[807, 136],[797, 158],[786, 181],[776, 203],[765, 226],[754, 249],[743, 274],[729, 302],[727, 311],[727, 334],[727, 361],[727, 390],[727, 415],[723, 421],[697, 422],[673, 422],[642, 421],[637, 415],[637, 389]
+
+O outer
+[548, 253],[548, 229],[548, 203],[552, 177],[560, 153],[574, 130],[591, 112],[614, 98],[637, 89],[664, 84],[691, 83],[718, 87],[744, 95],[764, 105],[784, 122],[801, 145],[810, 165],[816, 194],[817, 221],[817, 246],[817, 272],[817, 300],[815, 328],[808, 352],[797, 373],[783, 391],[763, 407],[741, 418],[716, 426],[692, 428],[664, 428],[637, 423],[613, 413],[590, 398],[573, 380],[561, 361],[552, 336],[548, 305],[548, 279]
+
+O inner
+[638, 257],[638, 235],[639, 210],[644, 184],[661, 166],[685, 161],[709, 169],[722, 186],[726, 211],[727, 233],[727, 258],[727, 283],[726, 309],[719, 333],[703, 347],[685, 351],[662, 347],[646, 332],[640, 311],[638, 285]
+
+*/
