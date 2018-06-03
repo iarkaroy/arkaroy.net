@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import Background from './background';
 import Intro from './intro';
+import Title from './title';
 
 class Home extends Component {
 
@@ -18,7 +19,8 @@ class Home extends Component {
         return (
             <div>
                 <Background />
-                <Intro ref={instance => { this.intro = instance; }} />
+                <Intro />
+                <Title />
             </div>
         );
     }
